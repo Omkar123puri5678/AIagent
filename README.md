@@ -4,6 +4,23 @@ A neural network, trained from scratch, that labels each 30 seconds of an overni
 recording as one of five sleep stages (W, N1, N2, N3, REM). It learns from the
 [Sleep-EDF Expanded](https://physionet.org/content/sleep-edfx/1.0.0/) dataset in `Dataset/`.
 
+## Large files
+
+Two folders are too large for GitHub and are not in this repository:
+
+| Folder | Size | How to get it |
+|---|---|---|
+| `Dataset/` (raw recordings) | 8.1 GB | Download [Sleep-EDF Database Expanded 1.0.0](https://physionet.org/content/sleep-edfx/1.0.0/) from PhysioNet ([direct zip](https://physionet.org/static/published-projects/sleep-edfx/sleep-edf-database-expanded-1.0.0.zip)) and unzip it to `Dataset/archive/sleep-edf-database-expanded-1.0.0/` |
+| `data/sleep_edf/*.npz` (preprocessed epochs) | 4 GB | Not hosted anywhere; run `python preprocess.py` to rebuild it from the raw recordings (a few minutes) |
+
+Everything else is included, so you can use the trained model without the dataset:
+
+| File | Size | What it is |
+|---|---|---|
+| `checkpoints/sleep_stager.pt` | 7.7 MB | The trained network |
+| `data/features.csv` | 46 MB | Band-power and Hjorth features for all 237,936 epochs |
+| `data/sleep_edf/index.csv` | 10 KB | Per-recording summary: subject, night, epochs per stage |
+
 ## Setup
 
 ```powershell

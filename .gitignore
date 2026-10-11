@@ -1,8 +1,8 @@
 .venv/
 __pycache__/
 *.pyc
-checkpoints/
-data/sleep_edf/
+# Too large for GitHub; see "Large files" in README.md
 Dataset/
-data/features.csv
-results/explore/*/*.csv
+data/sleep_edf/*.npz
+# Stray clone of this repository
+AI/
