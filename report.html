@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sleep-stage classifier: work done</title>
+<style>
+  :root { --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --line: #e1e0d9; --accent: #2a78d6; }
+  body { margin: 0; background: var(--surface); color: var(--ink); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 900px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 30px; margin: 0 0 4px; }
+  h2 { font-size: 21px; margin: 44px 0 10px; padding-top: 18px; border-top: 1px solid var(--line); }
+  h3 { font-size: 16px; margin: 26px 0 6px; }
+  p.lead { font-size: 18px; margin: 14px 0; }
+  .meta { color: var(--ink2); margin: 0; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 15px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--ink2); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  code { background: #f0efec; padding: 1px 5px; border-radius: 4px; font-size: 14px; }
+  pre { background: #f0efec; padding: 12px 14px; border-radius: 6px; overflow-x: auto; font-size: 14px; }
+  pre code { background: none; padding: 0; }
+  figure { margin: 18px 0; }
+  img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; }
+  figcaption { color: var(--ink2); font-size: 14px; margin-top: 6px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 18px 0; }
+  .tile { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+  .tile b { display: block; font-size: 26px; }
+  .tile span { color: var(--ink2); font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Sleep-stage classifier: work done</h1>
+<p class="meta">Project folder <code>D:\Ai agent</code> · 11 October 2026</p>
+
+<p class="lead">A neural network, trained from scratch on the Sleep-EDF Expanded dataset, that labels every
+30 seconds of an overnight recording as one of five sleep stages. On 20 recordings from people it never
+saw in training, it agrees with the expert scoring on 82.4% of epochs.</p>
+
+<div class="tiles">
+  <div class="tile"><b>82.4%</b><span>test accuracy</span></div>
+  <div class="tile"><b>0.800</b><span>test macro F1</span></div>
+  <div class="tile"><b>0.767</b><span>Cohen's kappa</span></div>
+  <div class="tile"><b>237,936</b><span>labelled epochs</span></div>
+  <div class="tile"><b>100</b><span>subjects, 197 recordings</span></div>
+</div>
+
+<h2>1. Dataset and preprocessing</h2>
+<p>The raw data is 197 overnight recordings (153 from the cassette study, 44 from the telemetry study),
+8.1 GB of EDF files, each with an expert-scored hypnogram. <code>preprocess.py</code> does the following
+to every recording:</p>
+<table>
+  <tr><th>Step</th><th>What it does</th></tr>
+  <tr><td>Channels</td><td>Keeps EEG Fpz-Cz, EEG Pz-Oz and horizontal EOG, all at 100 Hz</td></tr>
+  <tr><td>Filter</td><td>Band-pass 0.3–35 Hz</td></tr>
+  <tr><td>Epochs and labels</td><td>30-second epochs labelled from the hypnogram; stages 3 and 4 merged into N3</td></tr>
+  <tr><td>Trim</td><td>Sleep period plus 30 minutes of wake on either side</td></tr>
+  <tr><td>Drop</td><td>1,988 epochs scored as movement or unknown</td></tr>
+  <tr><td>Normalise</td><td>Each channel standardised within the recording, clipped at ±20 standard deviations</td></tr>
+</table>
+<p>The output is one file per recording in <code>data/sleep_edf/</code> (4 GB in total) and an
+<code>index.csv</code> summary.</p>
+
+<h3>Class balance</h3>
+<table>
+  <tr><th>Stage</th><th class="num">Epochs</th><th class="num">Share</th></tr>
+  <tr><td>W (wake)</td><td class="num">70,140</td><td class="num">29.5%</td></tr>
+  <tr><td>N1</td><td class="num">25,175</td><td class="num">10.6%</td></tr>
+  <tr><td>N2</td><td class="num">88,983</td><td class="num">37.4%</td></tr>
+  <tr><td>N3</td><td class="num">19,454</td><td class="num">8.2%</td></tr>
+  <tr><td>REM</td><td class="num">34,184</td><td class="num">14.4%</td></tr>
+</table>
+
+<h2>2. Looking at one recording</h2>
+<p><code>explore.py</code> reproduces the signal-analysis steps of the Colab notebook on recording
+SC4001E (22.1 hours, 7 channels, 100 Hz).</p>
+
+<figure>
+  <img src="results/explore/SC4001E/01_raw_signals.png" alt="Raw signals of all seven channels, first 10 seconds">
+  <figcaption>All seven channels, first 10 seconds.</figcaption>
+</figure>
+<figure>
+  <img src="results/explore/SC4001E/02_filtered.png" alt="EEG and EOG before and after a 1 to 40 Hz band-pass filter">
+  <figcaption>Band-pass filter, 1–40 Hz: slow drift is removed, the fast detail is kept.</figcaption>
+</figure>
+<figure>
+  <img src="results/explore/SC4001E/03_rereferenced.png" alt="EEG channels before and after average re-referencing">
+  <figcaption>Average re-referencing. With only two EEG channels each becomes a mirror image of the other,
+  so this step is shown but not used for the model.</figcaption>
+</figure>
+<figure>
+  <img src="results/explore/SC4001E/04_power_spectrum.png" alt="Power spectral density, overall and by sleep stage">
+  <figcaption>Power spectrum. The stages differ: N3 has the most slow-wave power, N2 shows a bump near
+  13 Hz (sleep spindles), and wake keeps the most power at high frequencies.</figcaption>
+</figure>
+<figure>
+  <img src="results/explore/SC4001E/05_time_frequency.png" alt="Morlet wavelet power through the night under the hypnogram">
+  <figcaption>Wavelet power through the sleep period, lined up under the expert's hypnogram.</figcaption>
+</figure>
+
+<h2>3. The neural network</h2>
+<table>
+  <tr><th>Part</th><th>Detail</th></tr>
+  <tr><td>Input</td><td>3 channels × 3,000 samples per epoch, 20 consecutive epochs at a time</td></tr>
+  <tr><td>Epoch encoder</td><td>1D CNN: a wide first filter (half a second), then three narrower layers</td></tr>
+  <tr><td>Sequence model</td><td>Bidirectional GRU, so each epoch is scored using its neighbours</td></tr>
+  <tr><td>Size</td><td>2,012,165 parameters</td></tr>
+  <tr><td>Split</td><td>By subject: 157 training, 20 validation and 20 test recordings</td></tr>
+  <tr><td>Imbalance</td><td>Rare stages weighted more in the loss</td></tr>
+  <tr><td>Training</td><td>AdamW, cosine learning rate; about 9 minutes on a GTX 1650</td></tr>
+  <tr><td>Stopping</td><td>Stopped early at epoch 17; the saved model is from epoch 11, the best on validation</td></tr>
+</table>
+<figure>
+  <img src="results/training_curves.png" alt="Training loss and validation scores per epoch">
+  <figcaption>Training loss and validation scores per epoch.</figcaption>
+</figure>
+
+<h2>4. Results on the test subjects</h2>
+<table>
+  <tr><th>Stage</th><th class="num">F1</th><th class="num">Correctly identified</th></tr>
+  <tr><td>W</td><td class="num">0.901</td><td class="num">86%</td></tr>
+  <tr><td>N1</td><td class="num">0.579</td><td class="num">60%</td></tr>
+  <tr><td>N2</td><td class="num">0.840</td><td class="num">80%</td></tr>
+  <tr><td>N3</td><td class="num">0.802</td><td class="num">92%</td></tr>
+  <tr><td>REM</td><td class="num">0.877</td><td class="num">91%</td></tr>
+</table>
+<p>N1 is the weak stage: 21% of true N1 epochs are scored as N2 and 11% as wake. The other main
+confusion is N2 scored as N3 (11%).</p>
+<figure>
+  <img src="results/confusion_matrix.png" alt="Confusion matrix of the neural network on the test set">
+  <figcaption>Neural network, test set.</figcaption>
+</figure>
+<figure>
+  <img src="results/hypnogram_SC4081E.png" alt="One night scored by an expert and by the model">
+  <figcaption>One test night: the model agrees with the expert on 87.1% of epochs.</figcaption>
+</figure>
+
+<h2>5. Classical baseline</h2>
+<p><code>features.py</code> computes 21 hand-made features per epoch (delta, theta, alpha and beta band
+power plus the three Hjorth parameters, for each of the three channels). <code>baseline.py</code> trains
+logistic regression on them, scored on the same test recordings.</p>
+<table>
+  <tr><th></th><th class="num">Logistic regression</th><th class="num">Neural network</th></tr>
+  <tr><td>Accuracy</td><td class="num">78.1%</td><td class="num">82.4%</td></tr>
+  <tr><td>Macro F1</td><td class="num">0.700</td><td class="num">0.800</td></tr>
+  <tr><td>Kappa</td><td class="num">0.700</td><td class="num">0.767</td></tr>
+  <tr><td>W F1</td><td class="num">0.858</td><td class="num">0.901</td></tr>
+  <tr><td>N1 F1</td><td class="num">0.251</td><td class="num">0.579</td></tr>
+  <tr><td>N2 F1</td><td class="num">0.834</td><td class="num">0.840</td></tr>
+  <tr><td>N3 F1</td><td class="num">0.790</td><td class="num">0.802</td></tr>
+  <tr><td>REM F1</td><td class="num">0.769</td><td class="num">0.877</td></tr>
+</table>
+<figure>
+  <img src="results/baseline_confusion_matrix.png" alt="Confusion matrix of the logistic regression baseline">
+  <figcaption>Logistic regression baseline, test set.</figcaption>
+</figure>
+
+<h2>6. Files and how to run</h2>
+<table>
+  <tr><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>preprocess.py</code></td><td>Raw recordings to labelled epochs</td></tr>
+  <tr><td><code>dataset.py</code></td><td>Subject-wise split and training batches</td></tr>
+  <tr><td><code>model.py</code></td><td>The network</td></tr>
+  <tr><td><code>train.py</code></td><td>Training, early stopping, final test report</td></tr>
+  <tr><td><code>evaluate.py</code></td><td>Test scores for the saved model</td></tr>
+  <tr><td><code>plots.py</code></td><td>Result images</td></tr>
+  <tr><td><code>explore.py</code></td><td>Step-by-step look at one recording</td></tr>
+  <tr><td><code>features.py</code>, <code>baseline.py</code></td><td>Hand-made features and logistic regression</td></tr>
+  <tr><td><code>config.py</code></td><td>Model and training settings</td></tr>
+</table>
+<pre><code>.\.venv\Scripts\Activate.ps1
+python preprocess.py
+python train.py
+python evaluate.py
+python plots.py
+python explore.py
+python features.py
+python baseline.py</code></pre>
+<p>The trained model is <code>checkpoints/sleep_stager.pt</code>; all images and reports are in
+<code>results/</code>.</p>
+
+<h2>7. Known limits</h2>
+<ul>
+  <li>The model was trained once with the first settings chosen; nothing has been tuned.</li>
+  <li>One train/validation/test split was used, not cross-validation, so the scores carry some
+      luck of the split.</li>
+  <li>The 44 telemetry recordings include nights on a sleep drug (temazepam); they are mixed in
+      with the healthy-sleep recordings.</li>
+  <li>There is no script yet to score a new raw recording from outside the dataset.</li>
+  <li>Training uses full precision because half precision produces NaNs on the GTX 1650.</li>
+</ul>
+
+</main>
+</body>
+</html>

@@ -1,0 +1,9 @@
+mne
+numpy
+scipy
+pandas
+scikit-learn
+matplotlib
+# For GPU training on Windows, install PyTorch with CUDA support:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu126
+torch

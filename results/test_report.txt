@@ -1,0 +1,10 @@
+accuracy 0.824 | macro F1 0.800 | kappa 0.767
+per-stage F1: W 0.901  N1 0.579  N2 0.840  N3 0.802  REM 0.877
+
+confusion matrix (rows = true stage, columns = predicted stage)
+             W      N1      N2      N3     REM
+     W   4,492     587      49      18      58
+    N1     263   1,458     503      19     198
+    N2      11     445   6,860     980     256
+    N3       1       1     204   2,485       1
+   REM       4     104     167       0   2,807
