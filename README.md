@@ -36,18 +36,16 @@ adds beyond age (0.5 = guessing). The strongest sleep signals are reduced sleep-
 power, more limb movements, more light N2 sleep and less REM sleep. BMI is left out on purpose:
 whether it was recorded at all gave away the label.
 
-## Large files
+## Datasets
 
-These are not in this repository:
+| Dataset | Used for | What it contains | Get it |
+|---|---|---|---|
+| [Sleep-EDF Database Expanded 1.0.0](https://physionet.org/content/sleep-edfx/1.0.0/) (PhysioNet) | Part 1, sleep staging | 197 overnight recordings from 100 people: Sleep Cassette (healthy, age 25–101) and Sleep Telemetry (mild sleep difficulty). EEG Fpz-Cz, EEG Pz-Oz and horizontal EOG at 100 Hz, with expert hypnograms (R&K stages). 8.1 GB, open access | [Direct zip](https://physionet.org/static/published-projects/sleep-edfx/sleep-edf-database-expanded-1.0.0.zip); unzip to `Dataset/archive/sleep-edf-database-expanded-1.0.0/` |
+| [PhysioNet Challenge 2026](https://moody-challenge.physionet.org/2026/) (Human Sleep Project) | Part 2, cognitive impairment | Clinical polysomnography (EEG, EOG, chin and leg EMG, ECG, airflow, effort belts, SpO2) from several hospitals, with automatic CAISR sleep-stage annotations, demographics and a later cognitive impairment diagnosis. We used the large training set: 6,522 people from 3 hospitals (about 1.2 TB) | From the Challenge page, under its data terms; not republished here |
 
-| Folder | Size | How to get it |
-|---|---|---|
-| `Dataset/` (Sleep-EDF raw recordings) | 8.1 GB | Download [Sleep-EDF Database Expanded 1.0.0](https://physionet.org/content/sleep-edfx/1.0.0/) ([direct zip](https://physionet.org/static/published-projects/sleep-edfx/sleep-edf-database-expanded-1.0.0.zip)) and unzip it to `Dataset/archive/sleep-edf-database-expanded-1.0.0/` |
-| `data/sleep_edf/*.npz` (preprocessed epochs) | 4 GB | Run `python preprocess.py` to rebuild it from the raw recordings |
-| `data/hsp_large/` (Challenge feature table and demographics) | 3 MB | Patient-level data; get the recordings from the Challenge and run `hsp_features.py` (below). Not republished here |
-
-Included: the trained network `checkpoints/sleep_stager.pt` (7.7 MB), the epoch features
-`data/features.csv` and the recording summary `data/sleep_edf/index.csv`.
+The raw recordings are not in this repository. The scripts rebuild everything else from them;
+included are the trained network `checkpoints/sleep_stager.pt` (7.7 MB) and the small summary
+tables `data/features.csv` and `data/sleep_edf/index.csv`.
 
 ## Setup
 
