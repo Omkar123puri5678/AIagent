@@ -9,6 +9,7 @@
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-models-F7931E?logo=scikitlearn&logoColor=white)
 ![SHAP](https://img.shields.io/badge/SHAP-explanations-8A2BE2)
 ![Data](https://img.shields.io/badge/data-PhysioNet-0B5394)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
 *Final-year engineering project*
 
@@ -37,6 +38,8 @@ This project answers in two stages:
 - [Project structure](#project-structure)
 - [Limitations](#limitations)
 - [Acknowledgements](#acknowledgements)
+- [Citation](#citation)
+- [License](#license)
 
 ## Highlights
 
@@ -217,3 +220,13 @@ group were later impaired, against 3.0% of the low group.
 - [PhysioNet](https://physionet.org/) for Sleep-EDF Expanded and the George B. Moody PhysioNet
   Challenge 2026 data.
 - Built with PyTorch, MNE, scikit-learn, XGBoost and SHAP.
+
+## Citation
+
+If you use this code, please cite it using [`CITATION.cff`](CITATION.cff) (GitHub's
+**Cite this repository** button reads it).
+
+## License
+
+The code is released under the [MIT License](LICENSE). The datasets keep their own licences and
+terms of use from PhysioNet and are not covered by it.

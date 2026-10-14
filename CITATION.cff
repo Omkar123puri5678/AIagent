@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite it as below."
+title: "Sleep to Cognition: AI-based prediction of cognitive impairment from polysomnography"
+type: software
+authors:
+  - given-names: Omkar
+license: MIT
+repository-code: "https://github.com/Omkar123puri5678/AIagent"
+date-released: 2026-10-14
+keywords:
+  - sleep staging
+  - polysomnography
+  - EEG
+  - cognitive impairment
+  - deep learning
+  - SHAP
