@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System Design and Architecture</title>
+<style>
+  :root { --surface: #fcfcfb; --card: #ffffff; --ink: #0b0b0b; --ink2: #52514e; --line: #e1e0d9; --accent: #2a78d6;
+          --accent-soft: #e8f1fc; --warm: #c8622a; --warm-soft: #fbeee6; --soft: #f0efec; --wire: #8a8983; }
+  body { margin: 0; background: var(--surface); color: var(--ink); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 30px; line-height: 1.25; margin: 0 0 6px; }
+  h2 { font-size: 22px; margin: 48px 0 10px; padding-top: 18px; border-top: 1px solid var(--line); }
+  h3 { font-size: 17px; margin: 26px 0 6px; }
+  p.lead { font-size: 18px; margin: 14px 0; }
+  .meta { color: var(--ink2); margin: 0; font-size: 15px; }
+  a { color: var(--accent); }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 15px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--ink2); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  code { background: var(--soft); padding: 1px 5px; border-radius: 4px; font-size: 14px; }
+  pre { background: var(--soft); padding: 12px 14px; border-radius: 6px; overflow-x: auto; font-size: 14px; }
+  pre code { background: none; padding: 0; }
+  .diagram { overflow-x: auto; margin: 16px 0; border: 1px solid var(--line); border-radius: 8px; background: var(--card); padding: 8px; }
+  .diagram svg { display: block; width: 100%; min-width: 680px; height: auto; }
+  figcaption { color: var(--ink2); font-size: 14px; margin-top: 6px; }
+  .table-wrap { overflow-x: auto; }
+  nav ol { columns: 2; column-gap: 32px; padding-left: 20px; margin: 10px 0; }
+  nav a { text-decoration: none; }
+  ol.steps > li { margin: 10px 0; }
+  @media (max-width: 600px) { nav ol { columns: 1; } }
+
+  /* diagram styles */
+  svg text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; fill: var(--ink); }
+  svg .t { font-size: 15px; font-weight: 600; }
+  svg .s { font-size: 12.5px; fill: var(--ink2); }
+  svg .lbl { font-size: 12px; fill: var(--ink2); }
+  svg .head { font-size: 13px; font-weight: 700; fill: var(--ink2); letter-spacing: .04em; }
+  svg .box { fill: var(--card); stroke: var(--ink2); stroke-width: 1.3; }
+  svg .p1 { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.5; }
+  svg .p2 { fill: var(--warm-soft); stroke: var(--warm); stroke-width: 1.5; }
+  svg .grey { fill: var(--soft); stroke: var(--wire); stroke-width: 1.3; }
+  svg .dash { stroke-dasharray: 5 4; }
+  svg .wire { fill: none; stroke: var(--wire); stroke-width: 1.6; }
+  svg .wire.loop { stroke: var(--warm); }
+  svg .group { fill: none; stroke: var(--line); stroke-width: 1.2; stroke-dasharray: 4 4; }
+</style>
+</head>
+<body>
+<main>
+
+<h1>System design and architecture</h1>
+<p class="meta">AI-based prediction of cognitive impairment from polysomnography · Omkar Puri · companion to <a href="demo.html">the project demo</a></p>
+
+<p class="lead">This page shows how the system is built: the block diagram of the whole system, the design
+flow followed to build it, the architecture of each model, and a step-by-step guide to running it.</p>
+
+<nav>
+  <ol>
+    <li><a href="#block">System block diagram</a></li>
+    <li><a href="#flow">Design flow</a></li>
+    <li><a href="#arch1">Architecture: sleep-stage network</a></li>
+    <li><a href="#arch2">Architecture: risk prediction</a></li>
+    <li><a href="#tools">Tools and environment</a></li>
+    <li><a href="#guide">Step-by-step guide</a></li>
+  </ol>
+</nav>
+
+<!-- ============ 1. BLOCK DIAGRAM ============ -->
+<h2 id="block">1. System block diagram</h2>
+<p>The whole system, from sensors to the final answer. Blue blocks are Part 1 (sleep staging); orange blocks
+are Part 2 (cognitive impairment risk).</p>
+<figure class="diagram">
+<svg viewBox="0 0 960 400" role="img" aria-label="Block diagram: PSG signals go through preprocessing, then to the sleep-stage network producing a hypnogram, and to feature extraction, risk model and SHAP producing a risk score with reasons">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#8a8983"/>
+    </marker>
+    <marker id="arrowW" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#c8622a"/>
+    </marker>
+  </defs>
+
+  <!-- input -->
+  <rect class="box" x="10" y="50" width="150" height="320" rx="8"/>
+  <text class="t" x="85" y="78" text-anchor="middle">PSG recording</text>
+  <text class="s" x="85" y="96" text-anchor="middle">one night, 7–8 h</text>
+  <text class="s" x="30" y="130">EEG (brain)</text>
+  <text class="s" x="30" y="160">EOG (eyes)</text>
+  <text class="s" x="30" y="190">Chin EMG</text>
+  <text class="s" x="30" y="220">Leg EMG</text>
+  <text class="s" x="30" y="250">ECG (heart)</text>
+  <text class="s" x="30" y="280">Airflow, belts</text>
+  <text class="s" x="30" y="310">SpO2 (oxygen)</text>
+  <text class="s" x="30" y="350">+ age, sex</text>
+
+  <!-- preprocessing -->
+  <rect class="box" x="200" y="160" width="140" height="100" rx="8"/>
+  <text class="t" x="270" y="190" text-anchor="middle">Preprocessing</text>
+  <text class="s" x="270" y="212" text-anchor="middle">band-pass filter</text>
+  <text class="s" x="270" y="230" text-anchor="middle">30-s epochs</text>
+  <text class="s" x="270" y="248" text-anchor="middle">normalise</text>
+  <path class="wire" d="M160,210 H196" marker-end="url(#arrow)"/>
+
+  <!-- part 1 -->
+  <text class="head" x="390" y="38">PART 1</text>
+  <rect class="p1" x="390" y="50" width="170" height="90" rx="8"/>
+  <text class="t" x="475" y="82" text-anchor="middle">Sleep-stage network</text>
+  <text class="s" x="475" y="102" text-anchor="middle">1D CNN + BiGRU</text>
+  <text class="s" x="475" y="120" text-anchor="middle">raw EEG + EOG</text>
+  <rect class="p1" x="610" y="50" width="150" height="90" rx="8"/>
+  <text class="t" x="685" y="82" text-anchor="middle">Hypnogram</text>
+  <text class="s" x="685" y="102" text-anchor="middle">W · N1 · N2 · N3 · REM</text>
+  <text class="s" x="685" y="120" text-anchor="middle">every 30 s</text>
+  <path class="wire" d="M340,190 H365 V95 H386" marker-end="url(#arrow)"/>
+  <path class="wire" d="M560,95 H606" marker-end="url(#arrow)"/>
+
+  <!-- CAISR -->
+  <rect class="grey dash" x="390" y="170" width="170" height="70" rx="8"/>
+  <text class="t" x="475" y="198" text-anchor="middle">CAISR annotations</text>
+  <text class="s" x="475" y="218" text-anchor="middle">stages + events, supplied</text>
+  <path class="wire dash" d="M685,140 V205 H564" marker-end="url(#arrow)"/>
+  <text class="lbl" x="580" y="196">future: replace</text>
+
+  <!-- part 2 -->
+  <text class="head" x="390" y="392">PART 2</text>
+  <rect class="p2" x="390" y="270" width="170" height="100" rx="8"/>
+  <text class="t" x="475" y="300" text-anchor="middle">Feature extraction</text>
+  <text class="s" x="475" y="320" text-anchor="middle">49 sleep measures</text>
+  <text class="s" x="475" y="338" text-anchor="middle">+ age, sex = 51</text>
+  <text class="s" x="475" y="356" text-anchor="middle">(runs in the cloud)</text>
+  <path class="wire" d="M340,235 H365 V320 H386" marker-end="url(#arrow)"/>
+  <path class="wire" d="M475,240 V266" marker-end="url(#arrow)"/>
+
+  <rect class="p2" x="610" y="270" width="150" height="100" rx="8"/>
+  <text class="t" x="685" y="300" text-anchor="middle">Risk model</text>
+  <text class="s" x="685" y="320" text-anchor="middle">logistic regression</text>
+  <text class="s" x="685" y="338" text-anchor="middle">random forest</text>
+  <text class="s" x="685" y="356" text-anchor="middle">XGBoost</text>
+  <path class="wire" d="M560,320 H606" marker-end="url(#arrow)"/>
+
+  <rect class="p2" x="800" y="160" width="150" height="80" rx="8"/>
+  <text class="t" x="875" y="192" text-anchor="middle">SHAP</text>
+  <text class="s" x="875" y="212" text-anchor="middle">reasons per person</text>
+  <rect class="p2" x="800" y="270" width="150" height="100" rx="8"/>
+  <text class="t" x="875" y="300" text-anchor="middle">Output</text>
+  <text class="s" x="875" y="320" text-anchor="middle">risk score 0–1</text>
+  <text class="s" x="875" y="338" text-anchor="middle">low / moderate / high</text>
+  <text class="s" x="875" y="356" text-anchor="middle">+ top reasons</text>
+  <path class="wire" d="M760,320 H796" marker-end="url(#arrow)"/>
+  <path class="wire" d="M760,295 H780 V200 H796" marker-end="url(#arrow)"/>
+  <path class="wire" d="M875,240 V266" marker-end="url(#arrow)"/>
+</svg>
+<figcaption>Block diagram of the complete system. The dashed link is future work: today Part 2 uses the CAISR
+sleep stages supplied with the dataset; the plan is to replace them with our Part 1 network.</figcaption>
+</figure>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Block</th><th>Input</th><th>Output</th><th>Code</th></tr>
+  <tr><td>Preprocessing</td><td>Raw EDF recording</td><td>Filtered, normalised 30-s epochs</td><td><code>preprocess.py</code></td></tr>
+  <tr><td>Sleep-stage network</td><td>20 epochs × 3 channels × 3,000 samples</td><td>One of 5 stages per epoch</td><td><code>model.py</code>, <code>train.py</code></td></tr>
+  <tr><td>Feature extraction</td><td>One night's signals + CAISR annotations</td><td>49 numbers per night</td><td><code>hsp_features.py</code></td></tr>
+  <tr><td>Risk model</td><td>51 numbers (49 + age + sex)</td><td>Risk between 0 and 1</td><td><code>hsp_baseline.py</code></td></tr>
+  <tr><td>SHAP</td><td>Risk model + one person's numbers</td><td>Contribution of each input to the risk</td><td><code>hsp_explain.py</code></td></tr>
+</table>
+</div>
+
+<!-- ============ 2. DESIGN FLOW ============ -->
+<h2 id="flow">2. Design flow</h2>
+<p>The order in which the system was designed and built. It is not a straight line: whenever a check fails,
+the design goes back to an earlier step. The orange loop is the one that actually happened in this project.</p>
+<figure class="diagram">
+<svg viewBox="0 0 760 790" role="img" aria-label="Design flow from problem definition to report, with a feedback loop from the baseline check back to feature engineering">
+  <!-- boxes -->
+  <g>
+    <rect class="box" x="180" y="20" width="320" height="48" rx="8"/>
+    <text class="t" x="340" y="40" text-anchor="middle">1. Problem definition</text>
+    <text class="s" x="340" y="58" text-anchor="middle">predict later impairment, beyond age</text>
+
+    <rect class="box" x="180" y="88" width="320" height="48" rx="8"/>
+    <text class="t" x="340" y="108" text-anchor="middle">2. Data collection</text>
+    <text class="s" x="340" y="126" text-anchor="middle">Sleep-EDF · PhysioNet Challenge 2026</text>
+
+    <rect class="box" x="180" y="156" width="320" height="48" rx="8"/>
+    <text class="t" x="340" y="176" text-anchor="middle">3. Preprocessing</text>
+    <text class="s" x="340" y="194" text-anchor="middle">filter, epochs, normalise, missing values</text>
+
+    <rect class="box" x="180" y="224" width="320" height="48" rx="8"/>
+    <text class="t" x="340" y="244" text-anchor="middle">4. Feature engineering</text>
+    <text class="s" x="340" y="262" text-anchor="middle">49 sleep measures (Part 2)</text>
+
+    <rect class="box" x="180" y="292" width="320" height="48" rx="8"/>
+    <text class="t" x="340" y="312" text-anchor="middle">5. Model selection / architecture</text>
+    <text class="s" x="340" y="330" text-anchor="middle">CNN + GRU · LR · RF · XGBoost</text>
+
+    <rect class="box" x="180" y="360" width="320" height="48" rx="8"/>
+    <text class="t" x="340" y="380" text-anchor="middle">6. Training</text>
+    <text class="s" x="340" y="398" text-anchor="middle">loss, optimiser, class weighting</text>
+
+    <rect class="box" x="180" y="428" width="320" height="48" rx="8"/>
+    <text class="t" x="340" y="448" text-anchor="middle">7. Validation</text>
+    <text class="s" x="340" y="466" text-anchor="middle">5-fold cross-validation × 10, early stopping</text>
+
+    <path class="box" d="M340,496 L490,544 L340,592 L190,544 Z"/>
+    <text class="t" x="340" y="540" text-anchor="middle">8. Beats age baseline?</text>
+    <text class="s" x="340" y="558" text-anchor="middle">no data leakage?</text>
+
+    <rect class="box" x="180" y="618" width="320" height="48" rx="8"/>
+    <text class="t" x="340" y="638" text-anchor="middle">9. Testing on unseen hospitals</text>
+    <text class="s" x="340" y="656" text-anchor="middle">leave-one-hospital-out</text>
+
+    <rect class="box" x="180" y="686" width="320" height="48" rx="8"/>
+    <text class="t" x="340" y="706" text-anchor="middle">10. Explainability</text>
+    <text class="s" x="340" y="724" text-anchor="middle">SHAP values, risk groups</text>
+
+    <rect class="p1" x="180" y="754" width="320" height="30" rx="8"/>
+    <text class="t" x="340" y="774" text-anchor="middle">11. Report / demo</text>
+  </g>
+  <!-- straight arrows -->
+  <path class="wire" d="M340,68 V84" marker-end="url(#arrow)"/>
+  <path class="wire" d="M340,136 V152" marker-end="url(#arrow)"/>
+  <path class="wire" d="M340,204 V220" marker-end="url(#arrow)"/>
+  <path class="wire" d="M340,272 V288" marker-end="url(#arrow)"/>
+  <path class="wire" d="M340,340 V356" marker-end="url(#arrow)"/>
+  <path class="wire" d="M340,408 V424" marker-end="url(#arrow)"/>
+  <path class="wire" d="M340,476 V492" marker-end="url(#arrow)"/>
+  <path class="wire" d="M340,592 V614" marker-end="url(#arrow)"/>
+  <text class="lbl" x="350" y="608">yes</text>
+  <path class="wire" d="M340,666 V682" marker-end="url(#arrow)"/>
+  <path class="wire" d="M340,734 V750" marker-end="url(#arrow)"/>
+  <!-- feedback loop -->
+  <path class="wire loop" d="M490,544 H600 V248 H504" marker-end="url(#arrowW)"/>
+  <text class="lbl" x="500" y="536">no</text>
+  <text class="lbl" x="612" y="380" style="fill:#c8622a">revise and retrain</text>
+  <text class="lbl" x="612" y="398" style="fill:#c8622a">e.g. BMI leak found,</text>
+  <text class="lbl" x="612" y="416" style="fill:#c8622a">BMI removed;</text>
+  <text class="lbl" x="612" y="434" style="fill:#c8622a">small set → large set</text>
+  <!-- left side phase labels -->
+  <text class="head" x="20" y="100">DATA</text>
+  <path class="group" d="M10,82 H170 M10,214 H170"/>
+  <text class="head" x="20" y="250">MODEL</text>
+  <path class="group" d="M10,482 H170"/>
+  <text class="head" x="20" y="520">EVALUATE</text>
+  <path class="group" d="M10,676 H170"/>
+  <text class="head" x="20" y="712">DELIVER</text>
+</svg>
+<figcaption>Design flow (also called the machine-learning workflow). Step 8 is a gate: the model only moves on if it
+beats the simple baseline and the score is not caused by leakage.</figcaption>
+</figure>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Step</th><th>Key question</th><th>Decision made in this project</th></tr>
+  <tr><td>1. Problem definition</td><td>What exactly do we predict, and how do we know it works?</td><td>Later cognitive impairment; success = beating age alone among people of the same age</td></tr>
+  <tr><td>2. Data collection</td><td>Is there labelled data, and enough of it?</td><td>Sleep-EDF for staging; Challenge 2026, 6,522 people, for impairment</td></tr>
+  <tr><td>3. Preprocessing</td><td>How do we remove noise and make recordings comparable?</td><td>0.3–35 Hz filter, 30-s epochs, z-score per recording</td></tr>
+  <tr><td>4. Feature engineering</td><td>Which measurements carry the signal?</td><td>49 measures chosen from sleep and dementia research</td></tr>
+  <tr><td>5. Model selection</td><td>Which model fits the data type and size?</td><td>Deep network for raw signals; classical models for the feature table</td></tr>
+  <tr><td>6. Training</td><td>How does the model learn without ignoring rare classes?</td><td>Class-weighted loss; AdamW; regularisation</td></tr>
+  <tr><td>7. Validation</td><td>Is the score stable and on unseen people?</td><td>Split by person; repeated 5-fold cross-validation</td></tr>
+  <tr><td>8. Gate</td><td>Is it better than the simple baseline, and honest?</td><td>Found and removed the BMI leak; moved to the large dataset</td></tr>
+  <tr><td>9. Testing</td><td>Does it work somewhere new?</td><td>Leave-one-hospital-out: beats age at all 3 hospitals</td></tr>
+  <tr><td>10. Explainability</td><td>Why does it predict what it predicts?</td><td>SHAP; top signals match medical research</td></tr>
+</table>
+</div>
+
+<!-- ============ 3. PART 1 ARCHITECTURE ============ -->
+<h2 id="arch1">3. Architecture: sleep-stage network (Part 1)</h2>
+<p>A two-stage deep neural network. The <strong>epoch encoder</strong> (a 1D convolutional neural network)
+reads each 30-second epoch and turns it into 2,048 numbers that describe its wave patterns. The
+<strong>sequence model</strong> (a bidirectional GRU) then reads 20 of these in a row, so each epoch is
+scored with 10 minutes of context, as a human expert would.</p>
+<figure class="diagram">
+<svg viewBox="0 0 960 360" role="img" aria-label="Network architecture: input, convolution and pooling layers in the epoch encoder, then a bidirectional GRU and linear layer giving five sleep stages">
+  <text class="head" x="20" y="28">EPOCH ENCODER (1D CNN) · applied to each 30-s epoch</text>
+  <rect class="group" x="10" y="38" width="940" height="122" rx="10"/>
+
+  <rect class="box" x="25" y="58" width="130" height="86" rx="8"/>
+  <text class="t" x="90" y="84" text-anchor="middle">Input</text>
+  <text class="s" x="90" y="104" text-anchor="middle">3 channels</text>
+  <text class="s" x="90" y="122" text-anchor="middle">× 3,000 samples</text>
+
+  <rect class="p1" x="177" y="58" width="130" height="86" rx="8"/>
+  <text class="t" x="242" y="80" text-anchor="middle">Conv 1</text>
+  <text class="s" x="242" y="98" text-anchor="middle">64 filters, k = 50</text>
+  <text class="s" x="242" y="114" text-anchor="middle">stride 6 · BN · ReLU</text>
+  <text class="s" x="242" y="132" text-anchor="middle">→ 64 × 500</text>
+
+  <rect class="box" x="329" y="58" width="130" height="86" rx="8"/>
+  <text class="t" x="394" y="80" text-anchor="middle">Max-pool ÷8</text>
+  <text class="s" x="394" y="98" text-anchor="middle">+ dropout 0.5</text>
+  <text class="s" x="394" y="132" text-anchor="middle">→ 64 × 62</text>
+
+  <rect class="p1" x="481" y="58" width="130" height="86" rx="8"/>
+  <text class="t" x="546" y="80" text-anchor="middle">Conv 2–4</text>
+  <text class="s" x="546" y="98" text-anchor="middle">128 filters, k = 8</text>
+  <text class="s" x="546" y="114" text-anchor="middle">× 3 · BN · ReLU</text>
+  <text class="s" x="546" y="132" text-anchor="middle">→ 128 × 65</text>
+
+  <rect class="box" x="633" y="58" width="130" height="86" rx="8"/>
+  <text class="t" x="698" y="80" text-anchor="middle">Max-pool ÷4</text>
+  <text class="s" x="698" y="132" text-anchor="middle">→ 128 × 16</text>
+
+  <rect class="box" x="785" y="58" width="150" height="86" rx="8"/>
+  <text class="t" x="860" y="80" text-anchor="middle">Flatten</text>
+  <text class="s" x="860" y="98" text-anchor="middle">+ dropout 0.5</text>
+  <text class="s" x="860" y="132" text-anchor="middle">→ 2,048 features</text>
+
+  <path class="wire" d="M155,101 H173" marker-end="url(#arrow)"/>
+  <path class="wire" d="M307,101 H325" marker-end="url(#arrow)"/>
+  <path class="wire" d="M459,101 H477" marker-end="url(#arrow)"/>
+  <path class="wire" d="M611,101 H629" marker-end="url(#arrow)"/>
+  <path class="wire" d="M763,101 H781" marker-end="url(#arrow)"/>
+
+  <path class="wire" d="M860,144 V185 H130 V218" marker-end="url(#arrow)"/>
+  <text class="lbl" x="470" y="178" text-anchor="middle">repeated for 20 consecutive epochs (10 minutes)</text>
+
+  <text class="head" x="20" y="212">SEQUENCE MODEL · reads the 20 epochs together</text>
+  <rect class="group" x="10" y="222" width="940" height="122" rx="10"/>
+
+  <rect class="box" x="35" y="242" width="190" height="86" rx="8"/>
+  <text class="t" x="130" y="268" text-anchor="middle">Feature sequence</text>
+  <text class="s" x="130" y="288" text-anchor="middle">20 × 2,048</text>
+
+  <rect class="p1" x="275" y="242" width="210" height="86" rx="8"/>
+  <text class="t" x="380" y="266" text-anchor="middle">Bidirectional GRU</text>
+  <text class="s" x="380" y="286" text-anchor="middle">128 units forward</text>
+  <text class="s" x="380" y="302" text-anchor="middle">+ 128 units backward</text>
+  <text class="s" x="380" y="318" text-anchor="middle">→ 20 × 256</text>
+
+  <rect class="p1" x="535" y="242" width="170" height="86" rx="8"/>
+  <text class="t" x="620" y="266" text-anchor="middle">Linear layer</text>
+  <text class="s" x="620" y="286" text-anchor="middle">dropout 0.5</text>
+  <text class="s" x="620" y="302" text-anchor="middle">256 → 5</text>
+
+  <rect class="box" x="755" y="242" width="180" height="86" rx="8"/>
+  <text class="t" x="845" y="266" text-anchor="middle">Output</text>
+  <text class="s" x="845" y="286" text-anchor="middle">softmax over</text>
+  <text class="s" x="845" y="302" text-anchor="middle">W · N1 · N2 · N3 · REM</text>
+  <text class="s" x="845" y="318" text-anchor="middle">for each of 20 epochs</text>
+
+  <path class="wire" d="M225,285 H271" marker-end="url(#arrow)"/>
+  <path class="wire" d="M485,285 H531" marker-end="url(#arrow)"/>
+  <path class="wire" d="M705,285 H751" marker-end="url(#arrow)"/>
+</svg>
+<figcaption>Layer-by-layer architecture with the output shape after each block (channels × length).
+BN = batch normalisation; k = kernel (filter) width in samples; 50 samples = 0.5 s at 100 Hz.
+Total: 2,012,165 trainable parameters.</figcaption>
+</figure>
+
+<h3>Why each layer is there</h3>
+<div class="table-wrap">
+<table>
+  <tr><th>Layer</th><th>Purpose</th></tr>
+  <tr><td>Wide first convolution (k = 50, 0.5 s)</td><td>Long enough to "see" a whole slow wave or spindle; stride 6 reduces the length early to save computation</td></tr>
+  <tr><td>Batch normalisation</td><td>Keeps each layer's values in a stable range, so training is faster and more reliable</td></tr>
+  <tr><td>ReLU</td><td>Non-linear activation; lets the network learn shapes, not just weighted sums</td></tr>
+  <tr><td>Max-pooling</td><td>Keeps the strongest response in each window; shrinks the data and makes detection tolerant to small shifts in time</td></tr>
+  <tr><td>Three narrow convolutions (k = 8)</td><td>Combine the simple shapes found by the first layer into more complex patterns</td></tr>
+  <tr><td>Dropout 0.5</td><td>Randomly switches off half the values during training, so the network cannot rely on any single one: prevents overfitting</td></tr>
+  <tr><td>Bidirectional GRU</td><td>A recurrent layer with memory. Forward direction remembers what came before, backward what comes after; sleep stages follow typical transitions</td></tr>
+  <tr><td>Linear + softmax</td><td>Turns the 256 numbers into 5 probabilities, one per stage, summing to 1</td></tr>
+</table>
+</div>
+
+<h3>Training settings (hyperparameters)</h3>
+<div class="table-wrap">
+<table>
+  <tr><th>Setting</th><th>Value</th><th>Meaning</th></tr>
+  <tr><td>Loss function</td><td>Weighted cross-entropy</td><td>Penalises wrong stages; rare stages (N1, N3) weighted more</td></tr>
+  <tr><td>Optimiser</td><td>AdamW</td><td>Adaptive gradient descent with weight decay</td></tr>
+  <tr><td>Learning rate</td><td>0.001, cosine schedule</td><td>Step size, slowly reduced during training</td></tr>
+  <tr><td>Weight decay</td><td>0.001</td><td>Regularisation: keeps weights small</td></tr>
+  <tr><td>Batch size</td><td>16 sequences × 20 epochs</td><td>320 epochs per training step</td></tr>
+  <tr><td>Gradient clipping</td><td>5.0</td><td>Stops very large updates that make GRUs unstable</td></tr>
+  <tr><td>Early stopping</td><td>Patience 6</td><td>Stop when validation score has not improved for 6 rounds; keep the best model</td></tr>
+  <tr><td>Data split</td><td>157 / 20 / 20 recordings</td><td>Train / validation / test, split by person</td></tr>
+  <tr><td>Hardware</td><td>GTX 1650 laptop GPU</td><td>About 9 minutes; stopped at round 17, best at round 11</td></tr>
+</table>
+</div>
+
+<!-- ============ 4. PART 2 ARCHITECTURE ============ -->
+<h2 id="arch2">4. Architecture: cognitive impairment risk (Part 2)</h2>
+<p>Part 2 is a classical machine-learning pipeline: measurements are computed from the night by signal
+processing, then a model maps them to a risk. Each block is a separate, replaceable step.</p>
+<figure class="diagram">
+<svg viewBox="0 0 960 380" role="img" aria-label="Risk pipeline: eight groups of inputs combine into a 51-number vector, then median fill, scaling, logistic regression and a risk score, with SHAP on a random forest for explanations">
+  <text class="head" x="20" y="22">INPUTS (per night)</text>
+  <g>
+    <rect class="p2" x="20" y="34" width="210" height="32" rx="6"/><text class="s" x="32" y="55">Sleep structure · 11</text>
+    <rect class="p2" x="20" y="74" width="210" height="32" rx="6"/><text class="s" x="32" y="95">Events per hour · 8</text>
+    <rect class="p2" x="20" y="114" width="210" height="32" rx="6"/><text class="s" x="32" y="135">EEG band power, slowing · 18</text>
+    <rect class="p2" x="20" y="154" width="210" height="32" rx="6"/><text class="s" x="32" y="175">Heart rate + HRV · 5</text>
+    <rect class="p2" x="20" y="194" width="210" height="32" rx="6"/><text class="s" x="32" y="215">Oxygen (SpO2) · 4</text>
+    <rect class="p2" x="20" y="234" width="210" height="32" rx="6"/><text class="s" x="32" y="255">Breathing · 2</text>
+    <rect class="p2" x="20" y="274" width="210" height="32" rx="6"/><text class="s" x="32" y="295">Chin muscle tone · 1</text>
+    <rect class="box" x="20" y="314" width="210" height="32" rx="6"/><text class="s" x="32" y="335">Age, sex · 2</text>
+  </g>
+  <path class="wire" d="M230,50 H250 V190 M230,90 H250 M230,130 H250 M230,170 H250 M230,210 H250 M230,250 H250 M230,290 H250 M230,330 H250 V190 H266" marker-end="url(#arrow)"/>
+
+  <rect class="box" x="270" y="150" width="120" height="80" rx="8"/>
+  <text class="t" x="330" y="182" text-anchor="middle">Feature vector</text>
+  <text class="s" x="330" y="202" text-anchor="middle">51 numbers</text>
+
+  <rect class="box" x="420" y="150" width="110" height="80" rx="8"/>
+  <text class="t" x="475" y="182" text-anchor="middle">Median fill</text>
+  <text class="s" x="475" y="202" text-anchor="middle">missing signals</text>
+
+  <rect class="box" x="560" y="150" width="110" height="80" rx="8"/>
+  <text class="t" x="615" y="182" text-anchor="middle">Scaling</text>
+  <text class="s" x="615" y="202" text-anchor="middle">z-score</text>
+
+  <rect class="p2" x="700" y="140" width="130" height="100" rx="8"/>
+  <text class="t" x="765" y="172" text-anchor="middle">Logistic</text>
+  <text class="t" x="765" y="190" text-anchor="middle">regression</text>
+  <text class="s" x="765" y="210" text-anchor="middle">C = 0.1</text>
+  <text class="s" x="765" y="226" text-anchor="middle">class-balanced</text>
+
+  <rect class="box" x="855" y="150" width="95" height="80" rx="8"/>
+  <text class="t" x="902" y="182" text-anchor="middle">Risk</text>
+  <text class="s" x="902" y="202" text-anchor="middle">0 – 1</text>
+
+  <path class="wire" d="M390,190 H416" marker-end="url(#arrow)"/>
+  <path class="wire" d="M530,190 H556" marker-end="url(#arrow)"/>
+  <path class="wire" d="M670,190 H696" marker-end="url(#arrow)"/>
+  <path class="wire" d="M830,190 H851" marker-end="url(#arrow)"/>
+
+  <!-- explanation branch -->
+  <rect class="grey" x="560" y="290" width="200" height="70" rx="8"/>
+  <text class="t" x="660" y="318" text-anchor="middle">Random forest</text>
+  <text class="s" x="660" y="338" text-anchor="middle">500 trees (for explanations)</text>
+  <rect class="grey" x="790" y="290" width="160" height="70" rx="8"/>
+  <text class="t" x="870" y="318" text-anchor="middle">SHAP</text>
+  <text class="s" x="870" y="338" text-anchor="middle">reasons per person</text>
+  <path class="wire" d="M475,230 V325 H556" marker-end="url(#arrow)"/>
+  <path class="wire" d="M760,325 H786" marker-end="url(#arrow)"/>
+
+  <!-- risk outputs -->
+  <text class="lbl" x="950" y="72" text-anchor="end">from risk to decision</text>
+  <text class="s" x="950" y="92" text-anchor="end">top 20% of risk → flagged</text>
+  <text class="s" x="950" y="110" text-anchor="end">top 10% high · next 20% moderate · rest low</text>
+</svg>
+<figcaption>Risk prediction pipeline. The main path (orange) is the best-scoring model, logistic regression.
+The grey branch is the random forest that SHAP explains, since SHAP is exact and fast for tree models.</figcaption>
+</figure>
+
+<h3>How logistic regression turns 51 numbers into a risk</h3>
+<pre><code>z    = w1·x1 + w2·x2 + … + w51·x51 + b        (weighted sum of the scaled inputs)
+risk = 1 / (1 + e^(−z))                       (sigmoid: squashes z into 0–1)</code></pre>
+<p>The weights <code>w</code> are learned from the training data. A positive weight means a higher value of that
+input raises the risk. C = 0.1 is strong regularisation: it keeps the weights small, so the model cannot
+latch onto noise in any single input.</p>
+
+<h3>How the pipeline is evaluated</h3>
+<div class="table-wrap">
+<table>
+  <tr><th>Method</th><th>Train on</th><th>Test on</th><th>Answers</th></tr>
+  <tr><td>Repeated 5-fold cross-validation</td><td>4/5 of people</td><td>Remaining 1/5, rotated; repeated 10 times</td><td>How well does it work on new people?</td></tr>
+  <tr><td>Leave-one-hospital-out</td><td>2 hospitals</td><td>The third hospital</td><td>Does it work at a new hospital?</td></tr>
+  <tr><td>Metric: age-conditioned AUROC</td><td colspan="2">Only compares people within 2 years of age</td><td>Does sleep add information beyond age?</td></tr>
+</table>
+</div>
+
+<!-- ============ 5. TOOLS ============ -->
+<h2 id="tools">5. Tools and environment</h2>
+<div class="table-wrap">
+<table>
+  <tr><th>Purpose</th><th>Tool</th></tr>
+  <tr><td>Language</td><td>Python 3.14</td></tr>
+  <tr><td>Deep learning</td><td>PyTorch (CUDA on GTX 1650)</td></tr>
+  <tr><td>Classical ML</td><td>scikit-learn (logistic regression, random forest), XGBoost</td></tr>
+  <tr><td>Signal processing</td><td>SciPy (filters, Welch spectra, peak detection), NumPy</td></tr>
+  <tr><td>Reading recordings</td><td>MNE (Sleep-EDF), edfio (Challenge EDF files)</td></tr>
+  <tr><td>Explainability</td><td>SHAP</td></tr>
+  <tr><td>Data tables and plots</td><td>pandas, matplotlib</td></tr>
+  <tr><td>Cloud compute</td><td>Cloud machine with the dataset attached (feature extraction on 1.2 TB of recordings)</td></tr>
+  <tr><td>Version control</td><td>Git and GitHub</td></tr>
+</table>
+</div>
+
+<!-- ============ 6. GUIDE ============ -->
+<h2 id="guide">6. Step-by-step guide</h2>
+<p>How to reproduce every result in this project, in order.</p>
+
+<h3>A. Set up (once)</h3>
+<pre><code>cd "D:\Ai agent"
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -r requirements.txt</code></pre>
+
+<h3>B. Part 1: sleep-stage network</h3>
+<ol class="steps">
+  <li><strong>Get the data:</strong> download Sleep-EDF Expanded from PhysioNet into <code>Dataset/</code>.</li>
+  <li><strong>Preprocess:</strong> <code>python preprocess.py</code> filters, cuts into epochs and normalises every recording into <code>data/sleep_edf/</code>.</li>
+  <li><strong>Train:</strong> <code>python train.py</code> trains the CNN + GRU with early stopping and saves the best model to <code>checkpoints/sleep_stager.pt</code>.</li>
+  <li><strong>Evaluate:</strong> <code>python evaluate.py</code> scores the saved model on the 20 test recordings.</li>
+  <li><strong>Plots:</strong> <code>python plots.py</code> draws the confusion matrix, training curves and hypnogram.</li>
+  <li><strong>Baseline:</strong> <code>python features.py</code> then <code>python baseline.py</code> for the logistic-regression comparison.</li>
+</ol>
+
+<h3>C. Part 2: cognitive impairment risk</h3>
+<ol class="steps">
+  <li><strong>Extract features in the cloud:</strong> on a cloud machine with the Challenge 2026 dataset attached,
+    run <code>python hsp_features.py &lt;path to the data&gt;</code>. It writes
+    <code>hsp_features.csv</code>, one row per night (about 3 hours for the large set).</li>
+  <li><strong>Download the table:</strong> put <code>hsp_features.csv</code> and the dataset's
+    <code>demographics.csv</code> in <code>data/hsp_large/</code>.</li>
+  <li><strong>Train and test the models:</strong> <code>python hsp_baseline.py data/hsp_large</code> runs
+    cross-validation and leave-one-hospital-out for all four models.</li>
+  <li><strong>Explain:</strong> <code>python hsp_explain.py data/hsp_large</code> computes SHAP values, risk
+    groups and worked examples.</li>
+  <li><strong>Results</strong> are saved in <code>results/</code> with the prefix <code>hsp_large_</code>.</li>
+</ol>
+
+<h3>D. Present</h3>
+<p>Open <a href="demo.html">demo.html</a> for the results and this page for the design. Both read their
+images from the <code>results/</code> folder, so keep the project folder together.</p>
+
+</main>
+</body>
+</html>

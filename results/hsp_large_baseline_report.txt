@@ -1,0 +1,30 @@
+6522 people, 497 later impaired (7.6%), 51 features
+per hospital: I0002 317 people / 51 impaired, I0006 1133 people / 112 impaired, S0001 5072 people / 334 impaired
+
+5-fold cross-validation, mean of 10 repeats (+- spread between repeats)
+model                  age-cond. AUROC    same hospital   AUROC   AUPRC  accuracy  precision  recall  specificity     F1
+age only                  0.531 +-0.003     0.532 +-0.002   0.774   0.231     0.804      0.206   0.553        0.824  0.300
+logistic regression       0.667 +-0.006     0.642 +-0.008   0.802   0.299     0.817      0.234   0.614        0.834  0.339
+random forest             0.650 +-0.006     0.624 +-0.005   0.790   0.267     0.811      0.218   0.572        0.831  0.316
+XGBoost                   0.625 +-0.008     0.597 +-0.011   0.784   0.259     0.811      0.218   0.573        0.831  0.316
+
+leave-one-hospital-out: age-conditioned AUROC (plain AUROC) on the hospital left out of training
+model                             I0002             I0006             S0001
+age only                  0.518 (0.689)     0.533 (0.777)     0.537 (0.779)
+logistic regression       0.762 (0.787)     0.690 (0.804)     0.565 (0.750)
+random forest             0.711 (0.763)     0.661 (0.798)     0.577 (0.746)
+XGBoost                   0.658 (0.734)     0.620 (0.774)     0.530 (0.717)
+
+confusion matrices, first cross-validation repeat (rows = truth, columns = not flagged / flagged)
+age only:
+  not impaired   4961  1064
+  impaired        221   276
+logistic regression:
+  not impaired   5017  1008
+  impaired        200   297
+random forest:
+  not impaired   5008  1017
+  impaired        209   288
+XGBoost:
+  not impaired   5003  1022
+  impaired        214   283

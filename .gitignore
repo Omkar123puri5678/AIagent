@@ -4,5 +4,8 @@ __pycache__/
 # Too large for GitHub; see "Large files" in README.md
 Dataset/
 data/sleep_edf/*.npz
+# Patient-level Challenge 2026 tables; get them from the Challenge, do not republish
+data/hsp/
+data/hsp_large/
 # Stray clone of this repository
 AI/

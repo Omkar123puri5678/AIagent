@@ -1,0 +1,484 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sleep and Cognitive Impairment</title>
+<style>
+  :root { --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --line: #e1e0d9; --accent: #2a78d6; --soft: #f0efec; --warn: #b4551f; }
+  body { margin: 0; background: var(--surface); color: var(--ink); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 900px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 30px; line-height: 1.25; margin: 0 0 6px; }
+  h2 { font-size: 22px; margin: 48px 0 10px; padding-top: 18px; border-top: 1px solid var(--line); }
+  h3 { font-size: 17px; margin: 28px 0 6px; }
+  p.lead { font-size: 18px; margin: 14px 0; }
+  .meta { color: var(--ink2); margin: 0; font-size: 15px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 15px; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--ink2); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  tr.best td { font-weight: 600; }
+  code { background: var(--soft); padding: 1px 5px; border-radius: 4px; font-size: 14px; }
+  figure { margin: 18px 0; }
+  img { max-width: 100%; height: auto; border: 1px solid var(--line); border-radius: 6px; }
+  figcaption { color: var(--ink2); font-size: 14px; margin-top: 6px; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; margin: 18px 0; }
+  .tile { border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+  .tile b { display: block; font-size: 26px; }
+  .tile span { color: var(--ink2); font-size: 14px; }
+  .flow { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin: 18px 0; }
+  .flow div { background: var(--soft); border-radius: 8px; padding: 12px 14px; font-size: 15px; }
+  .flow b { display: block; color: var(--accent); }
+  .box { border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 6px; padding: 10px 16px; margin: 18px 0; }
+  .box.warn { border-left-color: var(--warn); }
+  .box h4 { margin: 4px 0 6px; font-size: 15px; }
+  .box p { margin: 6px 0; }
+  .table-wrap { overflow-x: auto; }
+  nav ol { columns: 2; column-gap: 32px; padding-left: 20px; margin: 10px 0; }
+  nav a { color: var(--accent); text-decoration: none; }
+  dl dt { font-weight: 600; margin-top: 10px; }
+  dl dd { margin: 2px 0 0 0; color: var(--ink2); }
+  @media (max-width: 600px) { nav ol { columns: 1; } }
+</style>
+</head>
+<body>
+<main>
+
+<h1>AI-based prediction of cognitive impairment from overnight polysomnography</h1>
+<p class="meta">Final-year engineering project · Omkar Puri · October 2026 · <a href="design.html" style="color:var(--accent)">System design and architecture →</a></p>
+
+<p class="lead">Dementia and milder cognitive impairment develop slowly, and are usually diagnosed only once
+memory problems are obvious. Sleep changes early in this process. This project asks one question:
+<strong>can an AI read a single night's sleep recording and tell who is more likely to develop cognitive
+impairment later, beyond what age alone tells us?</strong></p>
+
+<div class="tiles">
+  <div class="tile"><b>82.4%</b><span>sleep-stage accuracy on people the network never saw</span></div>
+  <div class="tile"><b>6,522</b><span>sleep studies from 3 hospitals</span></div>
+  <div class="tile"><b>0.67 vs 0.53</b><span>sleep model vs age alone, comparing people of the same age</span></div>
+  <div class="tile"><b>3 of 3</b><span>unseen hospitals where the model beats age alone</span></div>
+</div>
+
+<nav>
+  <ol>
+    <li><a href="#background">Background</a></li>
+    <li><a href="#overview">Project overview</a></li>
+    <li><a href="#stage1">Part 1: sleep-stage network</a></li>
+    <li><a href="#data">Part 2: data</a></li>
+    <li><a href="#features">Part 2: features</a></li>
+    <li><a href="#models">Part 2: models</a></li>
+    <li><a href="#evaluation">How the models are tested</a></li>
+    <li><a href="#results">Results</a></li>
+    <li><a href="#explain">Explaining the predictions</a></li>
+    <li><a href="#lessons">Lessons and pitfalls</a></li>
+    <li><a href="#limits">Limitations</a></li>
+    <li><a href="#future">Future work</a></li>
+    <li><a href="#glossary">Glossary</a></li>
+  </ol>
+</nav>
+
+<h2 id="background">1. Background</h2>
+<h3>What is polysomnography?</h3>
+<p>Polysomnography (PSG) is the overnight sleep study done in a hospital sleep lab. Sensors record many body
+signals at the same time, which is why it is called <em>multimodal</em>:</p>
+<div class="table-wrap">
+<table>
+  <tr><th>Signal</th><th>Sensor</th><th>What it tells us</th></tr>
+  <tr><td>EEG</td><td>Electrodes on the scalp</td><td>Brain activity, and so which stage of sleep the person is in</td></tr>
+  <tr><td>EOG</td><td>Electrodes beside the eyes</td><td>Eye movements, which mark REM (dreaming) sleep</td></tr>
+  <tr><td>Chin EMG</td><td>Electrodes on the chin</td><td>Muscle tone, which normally drops almost to zero in REM</td></tr>
+  <tr><td>Leg EMG</td><td>Electrodes on the legs</td><td>Limb movements during sleep</td></tr>
+  <tr><td>ECG</td><td>Electrodes on the chest</td><td>Heart rate and heart rate variability</td></tr>
+  <tr><td>Airflow and effort belts</td><td>Nasal sensor, chest and belly belts</td><td>Breathing, and pauses in breathing (apnoea)</td></tr>
+  <tr><td>SpO2</td><td>Finger clip</td><td>Blood oxygen level</td></tr>
+</table>
+</div>
+
+<h3>Sleep stages</h3>
+<p>A sleep expert splits the night into 30-second windows called <strong>epochs</strong> and gives each one a
+stage: <strong>W</strong> (awake), <strong>N1</strong> (drowsy, very light sleep), <strong>N2</strong>
+(light sleep, marked by short bursts of brain activity called <em>sleep spindles</em>), <strong>N3</strong>
+(deep slow-wave sleep) and <strong>REM</strong> (dreaming sleep). The resulting graph of stage against
+time is called a <strong>hypnogram</strong>. Scoring one night by hand takes a trained technician
+1–2 hours.</p>
+
+<h3>Why sleep and the brain are linked</h3>
+<ul>
+  <li><strong>Memory:</strong> sleep spindles in N2 and slow waves in N3 are involved in moving the day's
+      memories into long-term storage.</li>
+  <li><strong>Clearing waste:</strong> during deep sleep the brain clears waste proteins, including
+      amyloid, which builds up in Alzheimer's disease.</li>
+  <li><strong>Early warning signs:</strong> people who later develop dementia often show less REM sleep,
+      fewer spindles, more broken sleep and slower brain waves, sometimes years before diagnosis.</li>
+</ul>
+<p>Hospitals already record PSG for millions of patients, mostly to check for sleep apnoea. If those
+recordings also carry a warning sign for cognitive decline, it would be a screening tool that costs nothing extra.</p>
+
+<h2 id="overview">2. Project overview</h2>
+<p>The project has two parts that were developed separately:</p>
+<div class="flow">
+  <div><b>Part 1 · Sleep staging</b>A deep neural network that scores sleep stages automatically from raw EEG and EOG
+    (Sleep-EDF dataset)</div>
+  <div><b>Part 2 · Feature extraction</b>49 measurements computed from each night: sleep structure, brain waves,
+    heart, breathing, oxygen, muscle tone</div>
+  <div><b>Part 2 · Risk prediction</b>Machine-learning models that turn those measurements, plus age and sex,
+    into a risk of later impairment</div>
+  <div><b>Part 2 · Explanation</b>SHAP values that show which measurements raised or lowered each person's risk</div>
+</div>
+<div class="box">
+  <h4>How the two parts connect</h4>
+  <p>Part 1 shows that a network can score sleep stages at close to expert level. In Part 2, the large
+  Challenge recordings come already staged by <strong>CAISR</strong>, an automatic scoring system supplied
+  with the dataset, so Part 2 uses those stages. Running our own Part 1 network on the Challenge recordings
+  is listed under <a href="#future">future work</a>.</p>
+</div>
+
+<h2 id="stage1">3. Part 1: automatic sleep-stage scoring</h2>
+<h3>Data and preprocessing</h3>
+<p><strong>Sleep-EDF Expanded</strong> (PhysioNet): 197 overnight recordings from 100 people, every epoch
+scored by an expert, 237,936 epochs in total. Three channels were used: two EEG channels (Fpz-Cz, Pz-Oz)
+and one EOG channel, all sampled at 100 Hz.</p>
+<ol>
+  <li><strong>Band-pass filter, 0.3–35 Hz:</strong> removes slow drift from sweat and movement, and
+      high-frequency muscle noise and mains hum.</li>
+  <li><strong>Cut into 30-second epochs</strong> with the expert's label. The old stages 3 and 4 are merged
+      into N3, following the current AASM scoring rules.</li>
+  <li><strong>Trim</strong> to the sleep period plus 30 minutes of wake either side, because the recordings
+      include many hours of daytime wake that would swamp the other stages.</li>
+  <li><strong>Normalise</strong> each channel per recording (z-score), so differences in electrode contact
+      between people do not confuse the network.</li>
+</ol>
+
+<h3>Network design</h3>
+<div class="table-wrap">
+<table>
+  <tr><th>Part</th><th>What it does and why</th></tr>
+  <tr><td>1D CNN (epoch encoder)</td><td>Convolution filters slide along the signal and learn wave shapes such as
+    spindles, slow waves and eye movements, which experts look for by eye. The first filter is half a second
+    wide, enough to capture slow waves.</td></tr>
+  <tr><td>Bidirectional GRU (sequence model)</td><td>Experts look at neighbouring epochs too: an ambiguous epoch
+    between two REM epochs is probably REM. The GRU reads 20 epochs (10 minutes) forwards and backwards to add
+    this context.</td></tr>
+  <tr><td>Class weighting</td><td>N1 and N3 are rare (11% and 8% of epochs), so mistakes on them are weighted
+    more in the loss. Otherwise the network would learn to ignore them.</td></tr>
+  <tr><td>Data split by person</td><td>157 recordings for training, 20 for validation and 20 for testing, with no
+    person in more than one set. Splitting by epoch instead would let the network memorise a person and score
+    too well.</td></tr>
+  <tr><td>Training</td><td>2.0 million parameters, AdamW optimiser, early stopping on validation; about
+    9 minutes on a GTX 1650 laptop GPU.</td></tr>
+</table>
+</div>
+
+<h3>Results on 20 unseen recordings</h3>
+<div class="table-wrap">
+<table>
+  <tr><th></th><th class="num">Accuracy</th><th class="num">Macro F1</th><th class="num">Cohen's kappa</th><th class="num">N1 F1</th></tr>
+  <tr><td>Logistic regression on 21 hand-made features</td><td class="num">78.1%</td><td class="num">0.700</td><td class="num">0.700</td><td class="num">0.251</td></tr>
+  <tr class="best"><td>CNN + GRU neural network</td><td class="num">82.4%</td><td class="num">0.800</td><td class="num">0.767</td><td class="num">0.579</td></tr>
+</table>
+</div>
+<p>Cohen's kappa measures agreement after removing agreement expected by chance. Above 0.6 counts as
+"substantial", and two human experts typically agree at about 0.75–0.8, so 0.767 is close to human level.
+The biggest gain over the classical baseline is on N1, the stage experts also disagree on most.</p>
+<figure>
+  <img src="results/hypnogram_SC4081E.png" alt="One night scored by a sleep expert and by the network">
+  <figcaption>One test night: expert scoring (top) and network scoring (bottom). They agree on 87.1% of epochs.</figcaption>
+</figure>
+<figure>
+  <img src="results/confusion_matrix.png" alt="Confusion matrix of the network on the test recordings">
+  <figcaption>Confusion matrix: rows are the expert's stage, columns the network's. Most errors are between
+  neighbouring stages (N1 with N2 or W, N2 with N3), where the boundary is gradual.</figcaption>
+</figure>
+
+<h2 id="data">4. Part 2: data for cognitive impairment</h2>
+<p>The data comes from the <strong>PhysioNet Challenge 2026</strong>, which uses recordings from the
+<strong>Human Sleep Project</strong>. Each person had a clinical PSG, and the dataset records whether
+they were later diagnosed with cognitive impairment.</p>
+<div class="table-wrap">
+<table>
+  <tr><th>Hospital</th><th class="num">People</th><th class="num">Later impaired</th><th class="num">Rate</th></tr>
+  <tr><td>I0002</td><td class="num">317</td><td class="num">51</td><td class="num">16.1%</td></tr>
+  <tr><td>I0006</td><td class="num">1,133</td><td class="num">112</td><td class="num">9.9%</td></tr>
+  <tr><td>S0001</td><td class="num">5,072</td><td class="num">334</td><td class="num">6.6%</td></tr>
+  <tr class="best"><td>Total</td><td class="num">6,522</td><td class="num">497</td><td class="num">7.6%</td></tr>
+</table>
+</div>
+<div class="box">
+  <h4>Engineering challenge: the data is too big for a laptop</h4>
+  <p>The full dataset is about 1.2 TB of recordings. Instead of downloading it, the feature-extraction code
+  was run on a <strong>cloud machine</strong> where the data is already stored. Only the
+  result came back to the laptop: a 2.6 MB table with one row per night. Processing took about
+  3 hours; 78 of 6,600 recordings could not be read and were skipped.</p>
+  <p>Two other properties shape the method. First, the classes are <strong>imbalanced</strong>: only 7.6% of
+  people became impaired, so a model that always says "healthy" would be 92% accurate and useless. Second,
+  the hospitals use <strong>different equipment and channel names</strong>, so the code has to recognise
+  dozens of name variants for the same signal.</p>
+</div>
+
+<h2 id="features">5. Part 2: turning a night into numbers</h2>
+<p>A night of PSG is millions of samples per channel. The models used here need a fixed set of numbers per
+person, so each night is summarised as 49 measurements, chosen from the sleep and dementia literature.
+Age and sex are added as two more inputs, giving 51.</p>
+<div class="table-wrap">
+<table>
+  <tr><th>Group</th><th class="num">Count</th><th>Measurements</th><th>Why it might matter</th></tr>
+  <tr><td>Sleep structure</td><td class="num">11</td><td>Total sleep time, sleep efficiency, time to fall asleep, time to first REM,
+    time awake after sleep onset (WASO), stage changes and awakenings per hour, share of each stage</td><td>Broken sleep and
+    less REM and deep sleep are seen before dementia</td></tr>
+  <tr><td>Events per hour</td><td class="num">8</td><td>Breathing events (apnoeas and hypopneas, by type), arousals, limb movements</td>
+    <td>Sleep apnoea starves the brain of oxygen; limb movements and arousals fragment sleep</td></tr>
+  <tr><td>EEG</td><td class="num">18</td><td>Relative power in delta, theta, alpha, sigma and beta bands in N2, N3 and REM;
+    REM slowing; Hjorth mobility and complexity</td><td>Sigma power reflects spindles; a shift towards slow theta
+    waves (slowing) is a known marker of brain ageing</td></tr>
+  <tr><td>Heart (ECG)</td><td class="num">5</td><td>Mean heart rate, heart rate variability (SDNN, RMSSD, pNN50, LF/HF)</td>
+    <td>Reflects the autonomic nervous system, which is affected in some dementias</td></tr>
+  <tr><td>Oxygen (SpO2)</td><td class="num">4</td><td>Mean, minimum, time below 90%, desaturations per hour</td>
+    <td>Repeated low oxygen can damage brain tissue</td></tr>
+  <tr><td>Breathing</td><td class="num">2</td><td>Breathing rate and how much it varies</td><td>Irregular breathing during sleep</td></tr>
+  <tr><td>Chin muscle</td><td class="num">1</td><td>Chin muscle tone in REM relative to non-REM</td>
+    <td>Loss of normal REM muscle relaxation is an early sign of some neurodegenerative diseases</td></tr>
+</table>
+</div>
+<p><strong>How EEG band power is computed:</strong> for every epoch of a given stage, Welch's method
+estimates the power spectrum (how much energy the signal has at each frequency). The energy in each band is
+divided by the total energy, giving a <em>relative</em> power that does not depend on electrode contact
+quality. These values are averaged over the night and stored on a log10 scale, which is why they are
+negative (−1.4 means about 4% of the total power).</p>
+
+<h2 id="models">6. Part 2: prediction models</h2>
+<p>Four models were compared, each giving a risk between 0 and 1 for every person:</p>
+<div class="table-wrap">
+<table>
+  <tr><th>Model</th><th>How it works</th><th>Why include it</th></tr>
+  <tr><td>Age only</td><td>Logistic regression on age alone</td><td>The reference point. Age is the biggest
+    known risk factor, so any useful model must beat this.</td></tr>
+  <tr><td>Logistic regression</td><td>Adds up the inputs, each multiplied by a learned weight, and squashes
+    the total into 0–1. Regularised (C = 0.1) to avoid overfitting.</td><td>Simple, fast and easy to
+    interpret; works well when signals are weak</td></tr>
+  <tr><td>Random forest</td><td>500 decision trees, each trained on a random sample of people and inputs; the
+    risk is their average vote</td><td>Can find non-linear patterns and interactions between inputs</td></tr>
+  <tr><td>XGBoost</td><td>Gradient boosting: trees built one after another, each correcting the previous
+    ones' mistakes</td><td>Usually the strongest method on tables of numbers</td></tr>
+</table>
+</div>
+<p>All models use <strong>class weighting</strong> so the rare impaired group counts as much as the large
+healthy group. Missing values (for example, a recording with no ECG) are filled with the median of the
+training data.</p>
+
+<h2 id="evaluation">7. How the models are tested</h2>
+<p>Testing is the most important design decision here: a medical model with an over-optimistic score is
+worse than no model.</p>
+
+<h3>Repeated 5-fold cross-validation</h3>
+<p>People are split into 5 groups. The model trains on 4 and predicts the 5th, and this is repeated until
+every person has been predicted by a model that never saw them. The whole process is repeated 10 times
+with different random splits, and the results are averaged. The ± values in the tables show how much the
+score moves between repeats.</p>
+
+<h3>Leave-one-hospital-out</h3>
+<p>The harder test: train on two hospitals and test on the third. This shows whether the model would work
+at a new hospital with different equipment and patients, which is how it would actually be used.</p>
+
+<h3>The main score: age-conditioned AUROC</h3>
+<p><strong>AUROC</strong> answers: if we pick one person who became impaired and one who did not, how often
+does the model give the impaired person the higher risk? 0.5 is a coin flip; 1.0 is perfect.</p>
+<p>The problem is that older people are more likely both to become impaired and to sleep worse. A model can
+score a high AUROC just by guessing age from sleep. Age alone already reaches an AUROC of 0.77.</p>
+<div class="box">
+  <h4>The fix: only compare people of the same age</h4>
+  <p>The <strong>age-conditioned AUROC</strong> (the official Challenge metric) only counts pairs of people
+  at most 2 years apart in age. Example: a 72-year-old who became impaired is compared with a 71-year-old
+  who did not, but never with a 50-year-old. Age then cannot help, so <strong>age alone scores about 0.5</strong>,
+  and anything above that comes from the sleep recording itself.</p>
+  <p>A stricter version, <strong>same-hospital</strong>, also requires both people to come from the same
+  hospital. This stops the model from scoring points just by recognising which hospital a recording came
+  from, since impairment rates differ between hospitals (6.6% to 16.1%).</p>
+</div>
+
+<h2 id="results">8. Results</h2>
+<h3>Cross-validation (6,522 people)</h3>
+<div class="table-wrap">
+<table>
+  <tr><th>Model</th><th class="num">Age-cond. AUROC</th><th class="num">Same hospital</th><th class="num">AUROC</th><th class="num">AUPRC</th></tr>
+  <tr><td>Age only</td><td class="num">0.531 ± 0.003</td><td class="num">0.532</td><td class="num">0.774</td><td class="num">0.231</td></tr>
+  <tr class="best"><td>Logistic regression</td><td class="num">0.667 ± 0.006</td><td class="num">0.642</td><td class="num">0.802</td><td class="num">0.299</td></tr>
+  <tr><td>Random forest</td><td class="num">0.650 ± 0.006</td><td class="num">0.624</td><td class="num">0.790</td><td class="num">0.267</td></tr>
+  <tr><td>XGBoost</td><td class="num">0.625 ± 0.008</td><td class="num">0.597</td><td class="num">0.784</td><td class="num">0.259</td></tr>
+</table>
+</div>
+<p>All three sleep models clearly beat age alone. Among people of the same age, the logistic regression
+ranks the impaired person higher about two times in three, against a coin flip for age alone.
+AUPRC (area under the precision-recall curve) rises from 0.23 to 0.30; for a rare outcome this is the more
+demanding score, and random guessing would give 0.076.</p>
+<p>The <strong>simplest model wins</strong>. This is common when the signal is real but weak and spread
+across many inputs: the tree models have more freedom to fit noise, while the regularised linear model
+does not.</p>
+<figure>
+  <img src="results/hsp_large_baseline_curves.png" alt="ROC and precision-recall curves for the four models">
+  <figcaption>Left: ROC curve, plain AUROC in brackets. Right: precision-recall curve. The blue line (logistic
+  regression) stays above the grey dashed line (age alone). The plain ROC curves look close because age
+  dominates them; the age-conditioned score in the table above shows the real difference.</figcaption>
+</figure>
+
+<h3>Screening view: flag the top 20%</h3>
+<p>For a yes/no decision, each model flags the 20% of people it rates at highest risk.</p>
+<div class="table-wrap">
+<table>
+  <tr><th>Model</th><th class="num">Recall</th><th class="num">Specificity</th><th class="num">Precision</th><th class="num">Accuracy</th></tr>
+  <tr><td>Age only</td><td class="num">55.3%</td><td class="num">82.4%</td><td class="num">20.6%</td><td class="num">80.4%</td></tr>
+  <tr class="best"><td>Logistic regression</td><td class="num">61.4%</td><td class="num">83.4%</td><td class="num">23.4%</td><td class="num">81.7%</td></tr>
+</table>
+</div>
+<p><strong>Recall</strong>: share of people who became impaired that the model flagged.
+<strong>Specificity</strong>: share of healthy people correctly not flagged. <strong>Precision</strong>:
+share of flagged people who really became impaired. Using sleep finds about 30 more of the 497 impaired
+people with fewer false alarms.</p>
+
+<h3>Testing on a hospital the model never saw</h3>
+<div class="table-wrap">
+<table>
+  <tr><th>Hospital held out</th><th class="num">People</th><th class="num">Age only</th><th class="num">Logistic regression</th><th class="num">Random forest</th><th class="num">XGBoost</th></tr>
+  <tr><td>I0002</td><td class="num">317</td><td class="num">0.518</td><td class="num"><b>0.762</b></td><td class="num">0.711</td><td class="num">0.658</td></tr>
+  <tr><td>I0006</td><td class="num">1,133</td><td class="num">0.533</td><td class="num"><b>0.690</b></td><td class="num">0.661</td><td class="num">0.620</td></tr>
+  <tr><td>S0001</td><td class="num">5,072</td><td class="num">0.537</td><td class="num">0.565</td><td class="num"><b>0.577</b></td><td class="num">0.530</td></tr>
+</table>
+</div>
+<p class="meta">Age-conditioned AUROC on the held-out hospital.</p>
+<p>The sleep models beat age alone at every hospital, which is the strongest evidence that they learned
+something about sleep rather than about one hospital. The gain is small for S0001. A likely reason is that
+when S0001 is held out, the model trains on only 1,450 people (the other two hospitals) and is asked to
+predict 5,072, from a hospital with a lower impairment rate and possibly different equipment.</p>
+
+<h2 id="explain">9. Explaining the predictions</h2>
+<p>A doctor will not trust a risk score without reasons. <strong>SHAP</strong> (SHapley Additive
+exPlanations, based on game theory) splits each person's predicted risk into a contribution from every
+input: "age raised the risk by 0.13, spindle power by 0.06…". The contributions add up exactly to the
+prediction.</p>
+<p>SHAP was applied to the <strong>random forest</strong>, the best tree model, because SHAP explains tree
+models exactly and quickly. The rankings below come from it. As with the scores, each person is explained
+by a model that never saw them.</p>
+<figure>
+  <img src="results/hsp_large_importance.png" alt="The 15 inputs that move the predicted risk most">
+  <figcaption>Average size of each input's effect on the predicted risk. Orange: a higher value means higher
+  risk. Blue: a higher value means lower risk.</figcaption>
+</figure>
+<div class="table-wrap">
+<table>
+  <tr><th>Rank</th><th>Input</th><th>Finding</th><th>Agrees with the literature?</th></tr>
+  <tr><td class="num">1</td><td>Age</td><td>Older, higher risk</td><td>Yes, strongest known risk factor</td></tr>
+  <tr><td class="num">2</td><td>Sigma power in N2</td><td>Fewer sleep spindles, higher risk</td><td>Yes, reduced spindles are reported in MCI and Alzheimer's</td></tr>
+  <tr><td class="num">3</td><td>Limb movements per hour</td><td>More movements, higher risk</td><td>Plausible: periodic limb movements fragment sleep and are linked to vascular risk</td></tr>
+  <tr><td class="num">4</td><td>Share of night in N2</td><td>More light sleep, higher risk</td><td>Yes, at the expense of deep and REM sleep</td></tr>
+  <tr><td class="num">5</td><td>Share of night in REM</td><td>Less REM, higher risk</td><td>Yes, lower REM predicts dementia in long-term studies</td></tr>
+  <tr><td class="num">6</td><td>Theta power in N2</td><td>More slow theta, higher risk</td><td>Yes, EEG slowing is a marker of brain ageing</td></tr>
+</table>
+</div>
+<p>The model was given 49 measurements with no medical knowledge, and the ones it relies on most are the
+ones the medical literature already links to cognitive decline. This suggests the model is learning a
+real biological signal and not a recording artefact.</p>
+
+<h3>Risk groups</h3>
+<div class="table-wrap">
+<table>
+  <tr><th>Group</th><th class="num">People</th><th class="num">Later impaired</th><th class="num">Rate</th><th class="num">vs average</th></tr>
+  <tr><td>Low risk (bottom 70%)</td><td class="num">4,565</td><td class="num">145</td><td class="num">3.2%</td><td class="num">0.4×</td></tr>
+  <tr><td>Moderate risk (next 20%)</td><td class="num">1,304</td><td class="num">170</td><td class="num">13.0%</td><td class="num">1.7×</td></tr>
+  <tr class="best"><td>High risk (top 10%)</td><td class="num">653</td><td class="num">182</td><td class="num">27.9%</td><td class="num">3.7×</td></tr>
+  <tr><td>Everyone</td><td class="num">6,522</td><td class="num">497</td><td class="num">7.6%</td><td class="num">1.0×</td></tr>
+</table>
+</div>
+<p>People in the high-risk group were 8.7 times as likely to become impaired as people in the low-risk group.</p>
+
+<h3>Example: one person's explanation</h3>
+<p>Age 86 · predicted risk <b>0.79 (high)</b> · actual outcome: <b>later impaired</b></p>
+<div class="table-wrap">
+<table>
+  <tr><th>Reason</th><th class="num">This person</th><th class="num">Typical</th><th class="num">Effect on risk</th></tr>
+  <tr><td>Age</td><td class="num">86</td><td class="num">61</td><td class="num">+0.127</td></tr>
+  <tr><td>Sigma (spindle) power in N2, log scale</td><td class="num">−1.78</td><td class="num">−1.42</td><td class="num">+0.062</td></tr>
+  <tr><td>Share of night in N2</td><td class="num">82%</td><td class="num">61%</td><td class="num">+0.054</td></tr>
+  <tr><td>Limb movements per hour</td><td class="num">392</td><td class="num">106</td><td class="num">+0.044</td></tr>
+  <tr><td>Share of night in REM</td><td class="num">7%</td><td class="num">15%</td><td class="num">+0.035</td></tr>
+</table>
+</div>
+<p>This reads like a clinical note: very old, few spindles, too much light sleep, very little REM, and
+heavily disturbed by leg movements.</p>
+
+<h2 id="lessons">10. Lessons and pitfalls</h2>
+<div class="box warn">
+  <h4>Pitfall 1: a leak that made the model look too good</h4>
+  <p>The first models included BMI and scored far better. Investigation showed why: at the largest hospital,
+  BMI was <strong>missing for 94% of people who stayed healthy but only 35% of those later impaired</strong>,
+  probably because impaired patients went through a different clinical pathway. The model was learning
+  "is BMI recorded?" instead of anything about sleep. This is called <strong>data leakage</strong>. BMI was
+  removed, and all results here are without it.</p>
+</div>
+<div class="box">
+  <h4>Lesson 2: more data turned a null result into a real one</h4>
+  <p>On the first, smaller release (1,087 people, 84 impaired), no model clearly beat age:</p>
+  <div class="table-wrap">
+  <table>
+    <tr><th>Age-conditioned AUROC</th><th class="num">Small set (1,087)</th><th class="num">Large set (6,522)</th></tr>
+    <tr><td>Age only</td><td class="num">0.494</td><td class="num">0.531</td></tr>
+    <tr><td>Logistic regression</td><td class="num">0.533</td><td class="num">0.667</td></tr>
+    <tr><td>Random forest</td><td class="num">0.530</td><td class="num">0.650</td></tr>
+    <tr><td>XGBoost</td><td class="num">0.484</td><td class="num">0.625</td></tr>
+  </table>
+  </div>
+  <p>With only 84 positive cases, a weak signal spread over 51 inputs is lost in noise. Six times more
+  people made it visible. This is why the full dataset was processed in the cloud rather than settling for
+  the small sample.</p>
+</div>
+<div class="box">
+  <h4>Lesson 3: the headline score must match the question</h4>
+  <p>Plain AUROC (0.80) looks impressive but is mostly age. The age-conditioned score (0.67) is lower but
+  honest, and it is the number that answers the project's question.</p>
+</div>
+
+<h2 id="limits">11. Limitations</h2>
+<ul>
+  <li><strong>Screening, not diagnosis.</strong> Even in the high-risk group, about 3 in 4 people did not
+      become impaired. The model points to who should be followed up, not who is ill.</li>
+  <li><strong>Weak result at the largest hospital.</strong> When S0001 is held out, the gain over age is
+      small (0.565 vs 0.537).</li>
+  <li><strong>Clinical population.</strong> Everyone was referred to a sleep lab, usually for a suspected
+      sleep disorder, so results may not apply to the general population.</li>
+  <li><strong>Hand-designed features.</strong> The 49 measurements only capture what we thought to measure.</li>
+  <li><strong>Stages from CAISR.</strong> Part 2 uses the dataset's automatic staging, not our own Part 1 network.</li>
+  <li><strong>No external test set.</strong> The Challenge's official hidden test hospitals are not
+      available, so leave-one-hospital-out is the closest substitute.</li>
+</ul>
+
+<h2 id="future">12. Future work</h2>
+<ol>
+  <li><strong>End-to-end deep learning:</strong> train a neural network on the raw signals, as in Part 1,
+      to find patterns beyond the 49 hand-made measurements.</li>
+  <li><strong>Connect Part 1 and Part 2:</strong> score the Challenge recordings with our own sleep-stage
+      network and compare with CAISR.</li>
+  <li><strong>Late fusion:</strong> combine the deep-learning risk with the feature model's risk.</li>
+  <li><strong>Hospital adaptation:</strong> methods that make the model less sensitive to differences in
+      equipment between hospitals.</li>
+</ol>
+
+<h2 id="glossary">Glossary</h2>
+<dl>
+  <dt>AUROC</dt><dd>Area under the ROC curve: the chance that a random positive case is ranked above a random
+    negative one. 0.5 = guessing, 1.0 = perfect.</dd>
+  <dt>Age-conditioned AUROC</dt><dd>AUROC counting only pairs of people at most 2 years apart in age, so age
+    cannot help.</dd>
+  <dt>AUPRC</dt><dd>Area under the precision-recall curve; more informative when positives are rare.</dd>
+  <dt>Cohen's kappa</dt><dd>Agreement between two raters, corrected for agreement by chance.</dd>
+  <dt>Cross-validation</dt><dd>Repeatedly training on part of the data and testing on the rest, so every
+    prediction is on unseen data.</dd>
+  <dt>Data leakage</dt><dd>When information that gives away the answer slips into the inputs, making the model
+    look better than it is.</dd>
+  <dt>Epoch</dt><dd>A 30-second window of the recording, the unit of sleep scoring.</dd>
+  <dt>Hypnogram</dt><dd>Graph of sleep stage against time through the night.</dd>
+  <dt>Sleep spindle</dt><dd>A short burst of 12–15 Hz (sigma band) brain activity in N2 sleep, linked to memory.</dd>
+  <dt>SHAP</dt><dd>A method that splits a model's prediction into contributions from each input.</dd>
+  <dt>WASO</dt><dd>Wake after sleep onset: minutes spent awake after first falling asleep.</dd>
+</dl>
+
+</main>
+</body>
+</html>
