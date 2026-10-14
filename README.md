@@ -85,6 +85,18 @@ python hsp_baseline.py data/hsp_large   # age only, logistic regression, random 
 python hsp_explain.py data/hsp_large    # SHAP explanations, risk groups, worked examples
 ```
 
+Use the model on a new person:
+
+```powershell
+python predict.py train data/hsp_large   # fits the final model on everyone, saves checkpoints/cognitive_model.joblib
+python predict.py night <recording.edf> <caisr_annotations.edf> --age 67 --sex female
+python predict.py table data/hsp_large/hsp_features.csv <record> --age 67 --sex female   # a night already measured
+```
+
+It prints a risk score, how it ranks against everyone and against people of the same age, the
+risk group (in cross-validation, 31.7% of the high group were later impaired against 3.0% of the
+low group) and the five features that moved the risk most. It is a research model, not a diagnosis.
+
 ## Files
 
 | File | Purpose |
@@ -100,6 +112,7 @@ python hsp_explain.py data/hsp_large    # SHAP explanations, risk groups, worked
 | `hsp_features.py` | 49 measurements per night of the Challenge 2026 data |
 | `hsp_baseline.py` | Cognitive impairment models, cross-validation, leave-one-hospital-out |
 | `hsp_explain.py` | SHAP explanations and risk groups |
+| `predict.py` | Saves the final model and scores one new night |
 | `config.py` | Model size and training settings |
 | `demo.html`, `design.html` | Project presentation and system design |
 

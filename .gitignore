@@ -1,11 +1,12 @@
 .venv/
 __pycache__/
 *.pyc
-# Too large for GitHub; see "Large files" in README.md
+# Too large for GitHub; see "Datasets" in README.md
 Dataset/
 data/sleep_edf/*.npz
 # Patient-level Challenge 2026 tables; get them from the Challenge, do not republish
 data/hsp/
 data/hsp_large/
+checkpoints/cognitive_model.joblib
 # Stray clone of this repository
 AI/
