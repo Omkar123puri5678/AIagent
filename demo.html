@@ -205,10 +205,13 @@ they were later diagnosed with cognitive impairment.</p>
 </div>
 <div class="box">
   <h4>Engineering challenge: the data is too big for a laptop</h4>
-  <p>The full dataset is about 1.2 TB of recordings. Instead of downloading it, the feature-extraction code
-  was run on a <strong>cloud machine</strong> where the data is already stored. Only the
-  result came back to the laptop: a 2.6 MB table with one row per night. Processing took about
-  3 hours; 78 of 6,600 recordings could not be read and were skipped.</p>
+  <p>The full dataset is about 1.2 TB of recordings, far more than fits in memory. The pipeline is therefore
+  split into two stages. <strong>Stage 1, feature extraction,</strong> streams the recordings one at a time:
+  each EDF file is read lazily (only the channels needed), its 49 measurements are computed, and the raw
+  signal is discarded. Recordings are processed by parallel worker processes, the table is checkpointed
+  every few recordings so a long run can resume, and the work can be split into shards. The result is a
+  2.6 MB table with one row per night. <strong>Stage 2, modelling,</strong> then runs on this small table
+  in seconds. Extraction took about 3 hours; 78 of 6,600 recordings could not be read and were skipped.</p>
   <p>Two other properties shape the method. First, the classes are <strong>imbalanced</strong>: only 7.6% of
   people became impaired, so a model that always says "healthy" would be 92% accurate and useless. Second,
   the hospitals use <strong>different equipment and channel names</strong>, so the code has to recognise
@@ -426,7 +429,7 @@ heavily disturbed by leg movements.</p>
   </table>
   </div>
   <p>With only 84 positive cases, a weak signal spread over 51 inputs is lost in noise. Six times more
-  people made it visible. This is why the full dataset was processed in the cloud rather than settling for
+  people made it visible. This is why the full 1.2 TB dataset was processed rather than settling for
   the small sample.</p>
 </div>
 <div class="box">

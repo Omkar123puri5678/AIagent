@@ -129,7 +129,7 @@ are Part 2 (cognitive impairment risk).</p>
   <text class="t" x="475" y="300" text-anchor="middle">Feature extraction</text>
   <text class="s" x="475" y="320" text-anchor="middle">49 sleep measures</text>
   <text class="s" x="475" y="338" text-anchor="middle">+ age, sex = 51</text>
-  <text class="s" x="475" y="356" text-anchor="middle">(runs in the cloud)</text>
+  <text class="s" x="475" y="356" text-anchor="middle">(streamed, 1 night at a time)</text>
   <path class="wire" d="M340,235 H365 V320 H386" marker-end="url(#arrow)"/>
   <path class="wire" d="M475,240 V266" marker-end="url(#arrow)"/>
 
@@ -475,7 +475,7 @@ latch onto noise in any single input.</p>
   <tr><td>Reading recordings</td><td>MNE (Sleep-EDF), edfio (Challenge EDF files)</td></tr>
   <tr><td>Explainability</td><td>SHAP</td></tr>
   <tr><td>Data tables and plots</td><td>pandas, matplotlib</td></tr>
-  <tr><td>Cloud compute</td><td>Cloud machine with the dataset attached (feature extraction on 1.2 TB of recordings)</td></tr>
+  <tr><td>Large-scale processing</td><td>Streaming EDF reading, parallel worker processes, checkpointed and sharded runs (1.2 TB of recordings)</td></tr>
   <tr><td>Version control</td><td>Git and GitHub</td></tr>
 </table>
 </div>
@@ -502,10 +502,10 @@ pip install -r requirements.txt</code></pre>
 
 <h3>C. Part 2: cognitive impairment risk</h3>
 <ol class="steps">
-  <li><strong>Extract features in the cloud:</strong> on a cloud machine with the Challenge 2026 dataset attached,
+  <li><strong>Extract features:</strong> with the Challenge 2026 dataset available,
     run <code>python hsp_features.py &lt;path to the data&gt;</code>. It writes
     <code>hsp_features.csv</code>, one row per night (about 3 hours for the large set).</li>
-  <li><strong>Download the table:</strong> put <code>hsp_features.csv</code> and the dataset's
+  <li><strong>Collect the table:</strong> put <code>hsp_features.csv</code> and the dataset's
     <code>demographics.csv</code> in <code>data/hsp_large/</code>.</li>
   <li><strong>Train and test the models:</strong> <code>python hsp_baseline.py data/hsp_large</code> runs
     cross-validation and leave-one-hospital-out for all four models.</li>

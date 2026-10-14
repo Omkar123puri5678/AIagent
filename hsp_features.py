@@ -2,9 +2,8 @@
 
     python hsp_features.py <path to the Challenge 2026 data>
 
-The recordings (a subset of the Human Sleep Project) are too large to keep locally, so this
-is meant to run on a cloud machine where the data is stored, and leave behind a small
-table, hsp_features.csv, to download. Join it to the dataset's demographics.csv (age, sex,
+The recordings (a subset of the Human Sleep Project) are about 1.2 TB, so they are streamed
+one night at a time and only a small table, hsp_features.csv, is kept. Join it to the dataset's demographics.csv (age, sex,
 BMI and the Cognitive_Impairment label) on BidsFolder and SessionID.
 
 For every night this reads the CAISR annotations and the raw signals and measures

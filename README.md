@@ -73,7 +73,8 @@ python baseline.py     # logistic regression baseline on those features
 ```
 
 Part 2, cognitive impairment. The Challenge recordings are about 1.2 TB, so feature extraction
-runs on a cloud machine where the data is stored and leaves a small table behind:
+streams them one night at a time (parallel workers, checkpointed, optionally sharded) and keeps
+only a small table of features:
 
 ```
 python hsp_features.py <path to the Challenge 2026 data> --out hsp_features.csv
