@@ -1,30 +1,30 @@
-6522 people, 497 later impaired (7.6%), 51 features
-per hospital: I0002 317 people / 51 impaired, I0006 1133 people / 112 impaired, S0001 5072 people / 334 impaired
+6429 people, 487 later impaired (7.6%), 51 features
+per hospital: I0002 307 people / 51 impaired, I0006 1122 people / 111 impaired, S0001 5000 people / 325 impaired
 
 5-fold cross-validation, mean of 10 repeats (+- spread between repeats)
 model                  age-cond. AUROC    same hospital   AUROC   AUPRC  accuracy  precision  recall  specificity     F1
-age only                  0.531 +-0.003     0.532 +-0.002   0.774   0.231     0.804      0.206   0.553        0.824  0.300
-logistic regression       0.667 +-0.006     0.642 +-0.008   0.802   0.299     0.817      0.234   0.614        0.834  0.339
-random forest             0.650 +-0.006     0.624 +-0.005   0.790   0.267     0.811      0.218   0.572        0.831  0.316
-XGBoost                   0.625 +-0.008     0.597 +-0.011   0.784   0.259     0.811      0.218   0.573        0.831  0.316
+age only                  0.528 +-0.005     0.529 +-0.005   0.774   0.232     0.804      0.206   0.556        0.824  0.300
+logistic regression       0.672 +-0.005     0.647 +-0.006   0.805   0.309     0.818      0.235   0.619        0.834  0.340
+random forest             0.653 +-0.004     0.624 +-0.004   0.792   0.269     0.811      0.216   0.571        0.830  0.314
+XGBoost                   0.627 +-0.007     0.596 +-0.008   0.785   0.262     0.811      0.217   0.573        0.831  0.315
 
 leave-one-hospital-out: age-conditioned AUROC (plain AUROC) on the hospital left out of training
 model                             I0002             I0006             S0001
-age only                  0.518 (0.689)     0.533 (0.777)     0.537 (0.779)
-logistic regression       0.762 (0.787)     0.690 (0.804)     0.565 (0.750)
-random forest             0.711 (0.763)     0.661 (0.798)     0.577 (0.746)
-XGBoost                   0.658 (0.734)     0.620 (0.774)     0.530 (0.717)
+age only                  0.518 (0.685)     0.535 (0.780)     0.537 (0.779)
+logistic regression       0.781 (0.798)     0.663 (0.797)     0.572 (0.755)
+random forest             0.708 (0.759)     0.678 (0.810)     0.577 (0.748)
+XGBoost                   0.678 (0.735)     0.633 (0.780)     0.542 (0.727)
 
 confusion matrices, first cross-validation repeat (rows = truth, columns = not flagged / flagged)
 age only:
-  not impaired   4961  1064
-  impaired        221   276
+  not impaired   4895  1047
+  impaired        216   271
 logistic regression:
-  not impaired   5017  1008
-  impaired        200   297
+  not impaired   4955   987
+  impaired        188   299
 random forest:
-  not impaired   5008  1017
-  impaired        209   288
+  not impaired   4934  1008
+  impaired        209   278
 XGBoost:
-  not impaired   5003  1022
-  impaired        214   283
+  not impaired   4938  1004
+  impaired        205   282

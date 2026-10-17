@@ -29,14 +29,13 @@ from sklearn.base import clone
 from sklearn.model_selection import StratifiedKFold, cross_val_predict
 
 import hsp_features
-from hsp_baseline import FOLDS, SEED, load_table, make_models
+from hsp_baseline import FOLDS, MIN_SLEEP_MINUTES, SEED, load_table, make_models
 from hsp_explain import HIGH_SHARE, MODERATE_SHARE
 
 MODEL_FILE = Path("checkpoints/cognitive_model.joblib")
 QUANTILES = np.linspace(0, 1, 101)
 AGE_BAND = 5  # years; same-age comparisons use risk percentiles stored per band, not individual people
 REASONS = 5
-SHORT_NIGHT_MINUTES = 120
 
 
 def train(data_dir: Path) -> None:
@@ -110,9 +109,9 @@ def report(features: dict, age: float, sex: str) -> None:
                  f"impaired, against {100 * saved['overall_rate']:.1f}% of everyone)")
 
     # A logistic regression's SHAP values: each feature's coefficient times its standardised value (log-odds).
-    imputer, scaler, regression = (step for _, step in model.steps)
-    contributions = regression.coef_[0] * scaler.transform(imputer.transform(person))[0]
-    if features.get("tst_min", np.inf) < SHORT_NIGHT_MINUTES:
+    clip, imputer, scaler, regression = (step for _, step in model.steps)
+    contributions = regression.coef_[0] * scaler.transform(imputer.transform(clip.transform(person)))[0]
+    if features.get("tst_min", np.inf) < MIN_SLEEP_MINUTES:
         lines.append(f"warning: only {features['tst_min']:.0f} minutes of sleep were scored, so this result is unreliable")
     lines.append("\nwhat moved the risk most:")
     for column in np.argsort(-np.abs(contributions))[:REASONS]:
@@ -120,7 +119,7 @@ def report(features: dict, age: float, sex: str) -> None:
         shown = "missing" if pd.isna(value) else f"{value:.3g}"
         effect = "raises" if contributions[column] > 0 else "lowers"
         lines.append(f"  {name:<30} {shown:>8}  (typical {saved['medians'][name]:.3g})  {effect} risk")
-    lines.append("\nA research model (age-conditioned AUROC 0.667), not a diagnosis.")
+    lines.append("\nA research model (age-conditioned AUROC 0.672), not a diagnosis.")
     print("\n".join(lines))
 
 

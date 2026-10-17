@@ -54,7 +54,7 @@ impairment later, beyond what age alone tells us?</strong></p>
 
 <div class="tiles">
   <div class="tile"><b>82.4%</b><span>sleep-stage accuracy on people the network never saw</span></div>
-  <div class="tile"><b>6,522</b><span>sleep studies from 3 hospitals</span></div>
+  <div class="tile"><b>6,429</b><span>sleep studies from 3 hospitals</span></div>
   <div class="tile"><b>0.67 vs 0.53</b><span>sleep model vs age alone, comparing people of the same age</span></div>
   <div class="tile"><b>3 of 3</b><span>unseen hospitals where the model beats age alone</span></div>
 </div>
@@ -197,10 +197,10 @@ they were later diagnosed with cognitive impairment.</p>
 <div class="table-wrap">
 <table>
   <tr><th>Hospital</th><th class="num">People</th><th class="num">Later impaired</th><th class="num">Rate</th></tr>
-  <tr><td>I0002</td><td class="num">317</td><td class="num">51</td><td class="num">16.1%</td></tr>
-  <tr><td>I0006</td><td class="num">1,133</td><td class="num">112</td><td class="num">9.9%</td></tr>
-  <tr><td>S0001</td><td class="num">5,072</td><td class="num">334</td><td class="num">6.6%</td></tr>
-  <tr class="best"><td>Total</td><td class="num">6,522</td><td class="num">497</td><td class="num">7.6%</td></tr>
+  <tr><td>I0002</td><td class="num">307</td><td class="num">51</td><td class="num">16.6%</td></tr>
+  <tr><td>I0006</td><td class="num">1,122</td><td class="num">111</td><td class="num">9.9%</td></tr>
+  <tr><td>S0001</td><td class="num">5,000</td><td class="num">325</td><td class="num">6.5%</td></tr>
+  <tr class="best"><td>Total</td><td class="num">6,429</td><td class="num">487</td><td class="num">7.6%</td></tr>
 </table>
 </div>
 <div class="box">
@@ -211,7 +211,7 @@ they were later diagnosed with cognitive impairment.</p>
   signal is discarded. Recordings are processed by parallel worker processes, the table is checkpointed
   every few recordings so a long run can resume, and the work can be split into shards. The result is a
   2.6 MB table with one row per night. <strong>Stage 2, modelling,</strong> then runs on this small table
-  in seconds. Extraction took about 3 hours; 78 of 6,600 recordings could not be read and were skipped.</p>
+  in seconds. Extraction took about 3 hours; 78 of 6,600 recordings could not be read and were skipped, and 93 nights with under two hours of scored sleep were dropped as too short to measure.</p>
   <p>Two other properties shape the method. First, the classes are <strong>imbalanced</strong>: only 7.6% of
   people became impaired, so a model that always says "healthy" would be 92% accurate and useless. Second,
   the hospitals use <strong>different equipment and channel names</strong>, so the code has to recognise
@@ -295,18 +295,18 @@ score a high AUROC just by guessing age from sleep. Age alone already reaches an
   and anything above that comes from the sleep recording itself.</p>
   <p>A stricter version, <strong>same-hospital</strong>, also requires both people to come from the same
   hospital. This stops the model from scoring points just by recognising which hospital a recording came
-  from, since impairment rates differ between hospitals (6.6% to 16.1%).</p>
+  from, since impairment rates differ between hospitals (6.5% to 16.6%).</p>
 </div>
 
 <h2 id="results">8. Results</h2>
-<h3>Cross-validation (6,522 people)</h3>
+<h3>Cross-validation (6,429 people)</h3>
 <div class="table-wrap">
 <table>
   <tr><th>Model</th><th class="num">Age-cond. AUROC</th><th class="num">Same hospital</th><th class="num">AUROC</th><th class="num">AUPRC</th></tr>
-  <tr><td>Age only</td><td class="num">0.531 ± 0.003</td><td class="num">0.532</td><td class="num">0.774</td><td class="num">0.231</td></tr>
-  <tr class="best"><td>Logistic regression</td><td class="num">0.667 ± 0.006</td><td class="num">0.642</td><td class="num">0.802</td><td class="num">0.299</td></tr>
-  <tr><td>Random forest</td><td class="num">0.650 ± 0.006</td><td class="num">0.624</td><td class="num">0.790</td><td class="num">0.267</td></tr>
-  <tr><td>XGBoost</td><td class="num">0.625 ± 0.008</td><td class="num">0.597</td><td class="num">0.784</td><td class="num">0.259</td></tr>
+  <tr><td>Age only</td><td class="num">0.528 ± 0.005</td><td class="num">0.529</td><td class="num">0.774</td><td class="num">0.232</td></tr>
+  <tr class="best"><td>Logistic regression</td><td class="num">0.672 ± 0.005</td><td class="num">0.647</td><td class="num">0.805</td><td class="num">0.309</td></tr>
+  <tr><td>Random forest</td><td class="num">0.653 ± 0.004</td><td class="num">0.624</td><td class="num">0.792</td><td class="num">0.269</td></tr>
+  <tr><td>XGBoost</td><td class="num">0.627 ± 0.007</td><td class="num">0.596</td><td class="num">0.785</td><td class="num">0.262</td></tr>
 </table>
 </div>
 <p>All three sleep models clearly beat age alone. Among people of the same age, the logistic regression
@@ -328,8 +328,8 @@ does not.</p>
 <div class="table-wrap">
 <table>
   <tr><th>Model</th><th class="num">Recall</th><th class="num">Specificity</th><th class="num">Precision</th><th class="num">Accuracy</th></tr>
-  <tr><td>Age only</td><td class="num">55.3%</td><td class="num">82.4%</td><td class="num">20.6%</td><td class="num">80.4%</td></tr>
-  <tr class="best"><td>Logistic regression</td><td class="num">61.4%</td><td class="num">83.4%</td><td class="num">23.4%</td><td class="num">81.7%</td></tr>
+  <tr><td>Age only</td><td class="num">55.6%</td><td class="num">82.4%</td><td class="num">20.6%</td><td class="num">80.4%</td></tr>
+  <tr class="best"><td>Logistic regression</td><td class="num">61.9%</td><td class="num">83.4%</td><td class="num">23.5%</td><td class="num">81.8%</td></tr>
 </table>
 </div>
 <p><strong>Recall</strong>: share of people who became impaired that the model flagged.
@@ -341,16 +341,16 @@ people with fewer false alarms.</p>
 <div class="table-wrap">
 <table>
   <tr><th>Hospital held out</th><th class="num">People</th><th class="num">Age only</th><th class="num">Logistic regression</th><th class="num">Random forest</th><th class="num">XGBoost</th></tr>
-  <tr><td>I0002</td><td class="num">317</td><td class="num">0.518</td><td class="num"><b>0.762</b></td><td class="num">0.711</td><td class="num">0.658</td></tr>
-  <tr><td>I0006</td><td class="num">1,133</td><td class="num">0.533</td><td class="num"><b>0.690</b></td><td class="num">0.661</td><td class="num">0.620</td></tr>
-  <tr><td>S0001</td><td class="num">5,072</td><td class="num">0.537</td><td class="num">0.565</td><td class="num"><b>0.577</b></td><td class="num">0.530</td></tr>
+  <tr><td>I0002</td><td class="num">307</td><td class="num">0.518</td><td class="num"><b>0.781</b></td><td class="num">0.708</td><td class="num">0.678</td></tr>
+  <tr><td>I0006</td><td class="num">1,122</td><td class="num">0.535</td><td class="num">0.663</td><td class="num"><b>0.678</b></td><td class="num">0.633</td></tr>
+  <tr><td>S0001</td><td class="num">5,000</td><td class="num">0.537</td><td class="num">0.572</td><td class="num"><b>0.577</b></td><td class="num">0.542</td></tr>
 </table>
 </div>
 <p class="meta">Age-conditioned AUROC on the held-out hospital.</p>
 <p>The sleep models beat age alone at every hospital, which is the strongest evidence that they learned
 something about sleep rather than about one hospital. The gain is small for S0001. A likely reason is that
-when S0001 is held out, the model trains on only 1,450 people (the other two hospitals) and is asked to
-predict 5,072, from a hospital with a lower impairment rate and possibly different equipment.</p>
+when S0001 is held out, the model trains on only 1,429 people (the other two hospitals) and is asked to
+predict 5,000, from a hospital with a lower impairment rate and possibly different equipment.</p>
 
 <h2 id="explain">9. Explaining the predictions</h2>
 <p>A doctor will not trust a risk score without reasons. <strong>SHAP</strong> (SHapley Additive
@@ -384,28 +384,28 @@ real biological signal and not a recording artefact.</p>
 <div class="table-wrap">
 <table>
   <tr><th>Group</th><th class="num">People</th><th class="num">Later impaired</th><th class="num">Rate</th><th class="num">vs average</th></tr>
-  <tr><td>Low risk (bottom 70%)</td><td class="num">4,565</td><td class="num">145</td><td class="num">3.2%</td><td class="num">0.4×</td></tr>
-  <tr><td>Moderate risk (next 20%)</td><td class="num">1,304</td><td class="num">170</td><td class="num">13.0%</td><td class="num">1.7×</td></tr>
-  <tr class="best"><td>High risk (top 10%)</td><td class="num">653</td><td class="num">182</td><td class="num">27.9%</td><td class="num">3.7×</td></tr>
-  <tr><td>Everyone</td><td class="num">6,522</td><td class="num">497</td><td class="num">7.6%</td><td class="num">1.0×</td></tr>
+  <tr><td>Low risk (bottom 70%)</td><td class="num">4,500</td><td class="num">128</td><td class="num">2.8%</td><td class="num">0.4×</td></tr>
+  <tr><td>Moderate risk (next 20%)</td><td class="num">1,286</td><td class="num">178</td><td class="num">13.8%</td><td class="num">1.8×</td></tr>
+  <tr class="best"><td>High risk (top 10%)</td><td class="num">643</td><td class="num">181</td><td class="num">28.1%</td><td class="num">3.7×</td></tr>
+  <tr><td>Everyone</td><td class="num">6,429</td><td class="num">487</td><td class="num">7.6%</td><td class="num">1.0×</td></tr>
 </table>
 </div>
-<p>People in the high-risk group were 8.7 times as likely to become impaired as people in the low-risk group.</p>
+<p>People in the high-risk group were 10 times as likely to become impaired as people in the low-risk group.</p>
 
 <h3>Example: one person's explanation</h3>
-<p>Age 86 · predicted risk <b>0.79 (high)</b> · actual outcome: <b>later impaired</b></p>
+<p>Age 86 · predicted risk <b>0.77 (high)</b> · actual outcome: <b>later impaired</b></p>
 <div class="table-wrap">
 <table>
   <tr><th>Reason</th><th class="num">This person</th><th class="num">Typical</th><th class="num">Effect on risk</th></tr>
-  <tr><td>Age</td><td class="num">86</td><td class="num">61</td><td class="num">+0.127</td></tr>
-  <tr><td>Sigma (spindle) power in N2, log scale</td><td class="num">−1.78</td><td class="num">−1.42</td><td class="num">+0.062</td></tr>
-  <tr><td>Share of night in N2</td><td class="num">82%</td><td class="num">61%</td><td class="num">+0.054</td></tr>
-  <tr><td>Limb movements per hour</td><td class="num">392</td><td class="num">106</td><td class="num">+0.044</td></tr>
-  <tr><td>Share of night in REM</td><td class="num">7%</td><td class="num">15%</td><td class="num">+0.035</td></tr>
+  <tr><td>Age</td><td class="num">86</td><td class="num">61</td><td class="num">+0.120</td></tr>
+  <tr><td>Sigma (spindle) power in N2, log scale</td><td class="num">−1.78</td><td class="num">−1.42</td><td class="num">+0.066</td></tr>
+  <tr><td>Share of night in N2</td><td class="num">82%</td><td class="num">61%</td><td class="num">+0.063</td></tr>
+  <tr><td>Limb movements per hour</td><td class="num">392</td><td class="num">104</td><td class="num">+0.040</td></tr>
+  <tr><td>EEG complexity</td><td class="num">3.33</td><td class="num">2.63</td><td class="num">+0.020</td></tr>
 </table>
 </div>
-<p>This reads like a clinical note: very old, few spindles, too much light sleep, very little REM, and
-heavily disturbed by leg movements.</p>
+<p>This reads like a clinical note: very old, few spindles, too much light sleep and heavily disturbed
+by leg movements.</p>
 
 <h2 id="lessons">10. Lessons and pitfalls</h2>
 <div class="box warn">
@@ -418,17 +418,17 @@ heavily disturbed by leg movements.</p>
 </div>
 <div class="box">
   <h4>Lesson 2: more data turned a null result into a real one</h4>
-  <p>On the first, smaller release (1,087 people, 84 impaired), no model clearly beat age:</p>
+  <p>On the first, smaller release (1,067 people, 80 impaired), the gain over age was small and noisy:</p>
   <div class="table-wrap">
   <table>
-    <tr><th>Age-conditioned AUROC</th><th class="num">Small set (1,087)</th><th class="num">Large set (6,522)</th></tr>
-    <tr><td>Age only</td><td class="num">0.494</td><td class="num">0.531</td></tr>
-    <tr><td>Logistic regression</td><td class="num">0.533</td><td class="num">0.667</td></tr>
-    <tr><td>Random forest</td><td class="num">0.530</td><td class="num">0.650</td></tr>
-    <tr><td>XGBoost</td><td class="num">0.484</td><td class="num">0.625</td></tr>
+    <tr><th>Age-conditioned AUROC</th><th class="num">Small set (1,067)</th><th class="num">Large set (6,429)</th></tr>
+    <tr><td>Age only</td><td class="num">0.504</td><td class="num">0.528</td></tr>
+    <tr><td>Logistic regression</td><td class="num">0.568</td><td class="num">0.672</td></tr>
+    <tr><td>Random forest</td><td class="num">0.549</td><td class="num">0.653</td></tr>
+    <tr><td>XGBoost</td><td class="num">0.502</td><td class="num">0.627</td></tr>
   </table>
   </div>
-  <p>With only 84 positive cases, a weak signal spread over 51 inputs is lost in noise. Six times more
+  <p>With only 80 positive cases, a weak signal spread over 51 inputs is lost in noise. Six times more
   people made it visible. This is why the full 1.2 TB dataset was processed rather than settling for
   the small sample.</p>
 </div>
@@ -443,7 +443,7 @@ heavily disturbed by leg movements.</p>
   <li><strong>Screening, not diagnosis.</strong> Even in the high-risk group, about 3 in 4 people did not
       become impaired. The model points to who should be followed up, not who is ill.</li>
   <li><strong>Weak result at the largest hospital.</strong> When S0001 is held out, the gain over age is
-      small (0.565 vs 0.537).</li>
+      small (0.572 vs 0.537).</li>
   <li><strong>Clinical population.</strong> Everyone was referred to a sleep lab, usually for a suspected
       sleep disorder, so results may not apply to the general population.</li>
   <li><strong>Hand-designed features.</strong> The 49 measurements only capture what we thought to measure.</li>

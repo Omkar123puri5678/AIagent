@@ -1,0 +1,63 @@
+features ranked by how much they move the predicted risk (mean |SHAP value|)
+   1. Age                            0.0913   higher value, higher risk
+   2. eeg_n2_sigma                   0.0250   higher value, lower risk
+   3. limb_events_per_hour           0.0249   higher value, higher risk
+   4. n2_fraction                    0.0179   higher value, higher risk
+   5. rem_fraction                   0.0177   higher value, lower risk
+   6. eeg_n2_theta                   0.0142   higher value, higher risk
+   7. arousal_events_per_hour        0.0139   higher value, lower risk
+   8. chin_rem_vs_nrem_tone          0.0116   higher value, higher risk
+   9. sleep_efficiency               0.0104   higher value, lower risk
+  10. breathing_rate_std             0.0096   higher value, higher risk
+  11. waso_min                       0.0092   higher value, higher risk
+  12. eeg_complexity                 0.0081   higher value, higher risk
+  13. tst_min                        0.0080   higher value, lower risk
+  14. eeg_rem_theta                  0.0074   higher value, higher risk
+  15. n1_fraction                    0.0073   higher value, lower risk
+
+risk groups by predicted risk (high = top 10%, moderate = next 20%)
+  group       people  later impaired    rate
+  low           4500             128    2.8%
+  moderate      1286             178   13.8%
+  high           643             181   28.1%
+  everyone      6429             487    7.6%
+
+worked examples: the five features that moved each person's risk most
+highest predicted risk:
+  sub-I0006179000935 | age 86 | predicted risk 0.77 (high) | outcome: later impaired
+    Age                                  86  (typical 61)  raises risk by 0.120
+    eeg_n2_sigma                      -1.78  (typical -1.42)  raises risk by 0.066
+    n2_fraction                       0.815  (typical 0.613)  raises risk by 0.063
+    limb_events_per_hour                392  (typical 104)  raises risk by 0.040
+    eeg_complexity                     3.33  (typical 2.63)  raises risk by 0.020
+  sub-S0001119902469 | age 81 | predicted risk 0.66 (high) | outcome: later impaired
+    Age                                  81  (typical 61)  raises risk by 0.126
+    eeg_n2_sigma                      -1.82  (typical -1.42)  raises risk by 0.074
+    limb_events_per_hour                427  (typical 104)  raises risk by 0.055
+    n2_fraction                       0.942  (typical 0.613)  raises risk by 0.043
+    arousal_events_per_hour            97.7  (typical 38.7)  lowers risk by 0.038
+  sub-I0006179012001 | age 78 | predicted risk 0.65 (high) | outcome: not impaired
+    Age                                  78  (typical 61)  raises risk by 0.122
+    n2_fraction                       0.938  (typical 0.613)  raises risk by 0.049
+    eeg_n2_sigma                      -1.71  (typical -1.42)  raises risk by 0.040
+    rem_fraction                          0  (typical 0.154)  raises risk by 0.033
+    eeg_n2_theta                      -1.06  (typical -0.824)  lowers risk by 0.032
+lowest predicted risk:
+  sub-S0001116338750 | age 55 | predicted risk 0.00 (low) | outcome: not impaired
+    Age                                  55  (typical 61)  lowers risk by 0.143
+    limb_events_per_hour               62.8  (typical 104)  lowers risk by 0.036
+    eeg_n2_sigma                      -1.36  (typical -1.42)  lowers risk by 0.028
+    rem_fraction                      0.161  (typical 0.154)  lowers risk by 0.017
+    n2_fraction                       0.617  (typical 0.613)  lowers risk by 0.016
+  sub-S0001117181095 | age 55 | predicted risk 0.00 (low) | outcome: not impaired
+    Age                                  55  (typical 61)  lowers risk by 0.114
+    limb_events_per_hour               51.5  (typical 104)  lowers risk by 0.033
+    sleep_efficiency                  0.887  (typical 0.778)  lowers risk by 0.031
+    waso_min                             30  (typical 71.5)  lowers risk by 0.026
+    rem_fraction                      0.231  (typical 0.154)  lowers risk by 0.025
+  sub-S0001118345060 | age 52 | predicted risk 0.00 (low) | outcome: not impaired
+    Age                                  52  (typical 61)  lowers risk by 0.134
+    limb_events_per_hour               79.8  (typical 104)  lowers risk by 0.029
+    waso_min                             34  (typical 71.5)  lowers risk by 0.028
+    eeg_n2_sigma                      -1.42  (typical -1.42)  lowers risk by 0.021
+    n2_fraction                         0.5  (typical 0.613)  lowers risk by 0.018

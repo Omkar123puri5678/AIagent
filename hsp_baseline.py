@@ -19,6 +19,11 @@ cannot be gained that way.
 
 For the yes/no scores each model flags the 20% of people it rates at highest risk.
 
+Broken recordings are cleaned first: nights with under two hours of scored sleep are dropped,
+EEG features from a flat channel are treated as missing, and the linear model caps every
+feature at the 1st and 99th percentile of its training data, so a few impossible values
+(10,000 limb movements an hour) cannot dominate it.
+
 The data folder defaults to data/hsp (the small training set); data/hsp_large holds the
 large one. Saves <folder name>_baseline_report.txt and <folder name>_baseline_curves.png
 to results/.
@@ -29,7 +34,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
-from sklearn.base import clone
+from sklearn.base import BaseEstimator, TransformerMixin, clone
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
@@ -49,6 +54,20 @@ AGE_GAP = 2  # years; the Challenge compares people at most this far apart in ag
 FLAGGED_SHARE = 0.2  # the yes/no scores flag this share of people, the ones at highest risk
 FOLDS, REPEATS = 5, 10
 SEED = 0
+MIN_SLEEP_MINUTES = 120  # shorter nights are too little sleep to measure; dropped
+FLAT_EEG = -11.9  # hsp_features writes log10(1e-12) = -12 when an EEG channel carries no power
+CLIP_QUANTILES = (0.01, 0.99)
+
+
+class Clip(BaseEstimator, TransformerMixin):
+    """Caps each feature at quantiles learned from the training data (missing values stay missing)."""
+
+    def fit(self, X, y=None):
+        self.low_, self.high_ = np.nanquantile(np.asarray(X, dtype=float), CLIP_QUANTILES, axis=0)
+        return self
+
+    def transform(self, X):
+        return np.clip(np.asarray(X, dtype=float), self.low_, self.high_)
 
 
 def load_table(data_dir: Path = DEFAULT_DATA_DIR) -> tuple[pd.DataFrame, list[str]]:
@@ -61,6 +80,9 @@ def load_table(data_dir: Path = DEFAULT_DATA_DIR) -> tuple[pd.DataFrame, list[st
     table = features.merge(demographics[KEYS + ["Age", "Sex", "BMI", "Cognitive_Impairment"]], on=KEYS)
     table["male"] = table["Sex"].str.lower().str.startswith("m").astype(float)
     table["label"] = table["Cognitive_Impairment"].astype(int)
+    table = table[table["tst_min"] >= MIN_SLEEP_MINUTES].reset_index(drop=True)
+    eeg = [c for c in table.columns if c.startswith("eeg_")]
+    table[eeg] = table[eeg].mask(table[eeg] <= FLAT_EEG)
     # BMI is left out on purpose: at the largest hospital it is missing for 94% of the people who stayed
     # healthy but only 35% of those later impaired, so a model scores well just from whether it was recorded.
     names = [c for c in features.columns if c not in KEYS] + ["Age", "male"]
@@ -73,7 +95,7 @@ def make_models(positive_share: float) -> dict:
     return {
         "age only": (make_pipeline(StandardScaler(), LogisticRegression(**balanced)), False),
         "logistic regression": (
-            make_pipeline(SimpleImputer(strategy="median"), StandardScaler(),
+            make_pipeline(Clip(), SimpleImputer(strategy="median"), StandardScaler(),
                           LogisticRegression(C=0.1, max_iter=2000, **balanced)), True),
         "random forest": (
             make_pipeline(SimpleImputer(strategy="median"),

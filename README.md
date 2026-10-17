@@ -44,7 +44,7 @@ This project answers in two stages:
 ## Highlights
 
 - **82.4% sleep-stage accuracy** (Cohen's κ 0.767) on 20 recordings the network never saw.
-- **Beats age alone** at predicting later cognitive impairment: age-conditioned AUROC **0.667** vs **0.531**, across **6,522 people** from **3 hospitals**.
+- **Beats age alone** at predicting later cognitive impairment: age-conditioned AUROC **0.672** vs **0.528**, across **6,429 people** from **3 hospitals**.
 - **Tested on unseen hospitals:** each hospital is held out of training in turn and used as the test set.
 - **Explainable:** SHAP shows which sleep signals raise or lower each person's risk.
 - **Scales to 1.2 TB:** feature extraction streams one night at a time, in parallel, with checkpoints.
@@ -96,14 +96,16 @@ baseline, because age alone already predicts impairment.
 
 ### Stage 2: cognitive impairment
 
-6,522 people, 497 later impaired (7.6%).
+6,429 people, 487 later impaired (7.6%), after dropping 93 nights with under two hours of
+scored sleep. Flat EEG channels count as missing, and the linear model caps every feature at
+its 1st and 99th percentile so a few broken recordings cannot dominate it.
 
 | Age-conditioned AUROC | Age only | Logistic regression |
 |---|---|---|
-| 5-fold cross-validation × 10 | 0.531 | **0.667** |
-| Held-out hospital I0002 (317 people) | 0.518 | **0.762** |
-| Held-out hospital I0006 (1,133 people) | 0.533 | **0.690** |
-| Held-out hospital S0001 (5,072 people) | 0.537 | **0.565** |
+| 5-fold cross-validation × 10 | 0.528 | **0.672** |
+| Held-out hospital I0002 (307 people) | 0.518 | **0.781** |
+| Held-out hospital I0006 (1,122 people) | 0.535 | **0.663** |
+| Held-out hospital S0001 (5,000 people) | 0.537 | **0.572** |
 
 > **Why age-conditioned?** It only compares people within 2 years of age of each other, so it
 > measures what sleep adds beyond age. 0.5 = guessing. Random forest and XGBoost were also
@@ -180,8 +182,8 @@ python predict.py table data/hsp_large/hsp_features.csv <record> --age 67 --sex 
 ```
 
 The output gives a risk score, the person's rank overall and among people of the same age, their
-risk group, and the five features that moved the risk most. In cross-validation, 31.7% of the high
-group were later impaired, against 3.0% of the low group.
+risk group, and the five features that moved the risk most. In cross-validation, 33.3% of the high
+group were later impaired, against 2.8% of the low group.
 
 ## Project structure
 
@@ -211,7 +213,7 @@ group were later impaired, against 3.0% of the low group.
 
 - **Research model, not a diagnosis.** It reflects patterns across many people and must not be
   used to make decisions about an individual's health.
-- Performance varies by hospital (age-conditioned AUROC 0.565–0.762), so results may not
+- Performance varies by hospital (age-conditioned AUROC 0.572–0.781), so results may not
   transfer to new sites without checking.
 - BMI is left out on purpose: whether it was recorded at all gave away the label.
 
