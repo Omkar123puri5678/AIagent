@@ -109,7 +109,7 @@ SC4001E (22.1 hours, 7 channels, 100 Hz).</p>
   <tr><td>Size</td><td>2,012,165 parameters</td></tr>
   <tr><td>Split</td><td>By subject: 157 training, 20 validation and 20 test recordings</td></tr>
   <tr><td>Imbalance</td><td>Rare stages weighted more in the loss</td></tr>
-  <tr><td>Training</td><td>AdamW, cosine learning rate; about 9 minutes on a GPU</td></tr>
+  <tr><td>Training</td><td>AdamW, cosine learning rate; about 9 minutes on a GTX 1650</td></tr>
   <tr><td>Stopping</td><td>Stopped early at epoch 17; the saved model is from epoch 11, the best on validation</td></tr>
 </table>
 <figure>
@@ -189,6 +189,7 @@ python -m sleep_staging.baseline</code></pre>
   <li>The 44 telemetry recordings include nights on a sleep drug (temazepam); they are mixed in
       with the healthy-sleep recordings.</li>
   <li>There is no script yet to score a new raw recording from outside the dataset.</li>
+  <li>Training uses full precision because half precision produces NaNs on the GTX 1650.</li>
 </ul>
 
 </main>
