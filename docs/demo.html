@@ -181,11 +181,11 @@ and one EOG channel, all sampled at 100 Hz.</p>
 "substantial", and two human experts typically agree at about 0.75–0.8, so 0.767 is close to human level.
 The biggest gain over the classical baseline is on N1, the stage experts also disagree on most.</p>
 <figure>
-  <img src="results/hypnogram_SC4081E.png" alt="One night scored by a sleep expert and by the network">
+  <img src="../results/sleep_staging/hypnogram_SC4081E.png" alt="One night scored by a sleep expert and by the network">
   <figcaption>One test night: expert scoring (top) and network scoring (bottom). They agree on 87.1% of epochs.</figcaption>
 </figure>
 <figure>
-  <img src="results/confusion_matrix.png" alt="Confusion matrix of the network on the test recordings">
+  <img src="../results/sleep_staging/confusion_matrix.png" alt="Confusion matrix of the network on the test recordings">
   <figcaption>Confusion matrix: rows are the expert's stage, columns the network's. Most errors are between
   neighbouring stages (N1 with N2 or W, N2 with N3), where the boundary is gradual.</figcaption>
 </figure>
@@ -317,7 +317,7 @@ demanding score, and random guessing would give 0.076.</p>
 across many inputs: the tree models have more freedom to fit noise, while the regularised linear model
 does not.</p>
 <figure>
-  <img src="results/hsp_large_baseline_curves.png" alt="ROC and precision-recall curves for the four models">
+  <img src="../results/cognitive/hsp_large_baseline_curves.png" alt="ROC and precision-recall curves for the four models">
   <figcaption>Left: ROC curve, plain AUROC in brackets. Right: precision-recall curve. The blue line (logistic
   regression) stays above the grey dashed line (age alone). The plain ROC curves look close because age
   dominates them; the age-conditioned score in the table above shows the real difference.</figcaption>
@@ -361,7 +361,7 @@ prediction.</p>
 models exactly and quickly. The rankings below come from it. As with the scores, each person is explained
 by a model that never saw them.</p>
 <figure>
-  <img src="results/hsp_large_importance.png" alt="The 15 inputs that move the predicted risk most">
+  <img src="../results/cognitive/hsp_large_importance.png" alt="The 15 inputs that move the predicted risk most">
   <figcaption>Average size of each input's effect on the predicted risk. Orange: a higher value means higher
   risk. Blue: a higher value means lower risk.</figcaption>
 </figure>

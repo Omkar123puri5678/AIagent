@@ -1,6 +1,6 @@
-"""First models for predicting future cognitive impairment:  python hsp_baseline.py [data folder]
+"""First models for predicting future cognitive impairment:  python -m cognitive.baseline [data folder]
 
-Trains on the per-night feature table from hsp_features.py, joined to the Challenge 2026
+Trains on the per-night feature table from cognitive/features.py, joined to the Challenge 2026
 demographics (age, sex and the Cognitive_Impairment label), and compares
   - age alone (the reference: older people are at higher risk whatever their sleep),
   - logistic regression, a random forest and XGBoost on all features.
@@ -26,7 +26,7 @@ feature at the 1st and 99th percentile of its training data, so a few impossible
 
 The data folder defaults to data/hsp (the small training set); data/hsp_large holds the
 large one. Saves <folder name>_baseline_report.txt and <folder name>_baseline_curves.png
-to results/.
+to results/cognitive/.
 """
 
 import sys
@@ -44,8 +44,9 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from xgboost import XGBClassifier
 
-import plots
-from plots import plt
+from cognitive import RESULTS_DIR
+from common import style
+from common.style import plt
 
 DEFAULT_DATA_DIR = Path("data/hsp")
 KEYS = ["SiteID", "BidsFolder", "SessionID"]
@@ -55,7 +56,7 @@ FLAGGED_SHARE = 0.2  # the yes/no scores flag this share of people, the ones at 
 FOLDS, REPEATS = 5, 10
 SEED = 0
 MIN_SLEEP_MINUTES = 120  # shorter nights are too little sleep to measure; dropped
-FLAT_EEG = -11.9  # hsp_features writes log10(1e-12) = -12 when an EEG channel carries no power
+FLAT_EEG = -11.9  # features.py writes log10(1e-12) = -12 when an EEG channel carries no power
 CLIP_QUANTILES = (0.01, 0.99)
 
 
@@ -167,24 +168,24 @@ def leave_one_hospital_out(table: pd.DataFrame, model, columns: list[str]) -> di
 
 
 def plot_curves(labels: np.ndarray, risks: dict[str, np.ndarray], filename: str) -> None:
-    colours = [plots.INK_MUTED, plots.BLUE, plots.ORANGE, "#2f9e6e"]
+    colours = [style.INK_MUTED, style.BLUE, style.ORANGE, "#2f9e6e"]
     fig, (roc, pr) = plt.subplots(1, 2, figsize=(10.5, 4.6))
     for (name, risk), colour in zip(risks.items(), colours):
-        style = {"color": colour, "linewidth": 1.8, "linestyle": "--" if name == "age only" else "-"}
+        line = {"color": colour, "linewidth": 1.8, "linestyle": "--" if name == "age only" else "-"}
         false_positive, true_positive, _ = roc_curve(labels, risk)
-        roc.plot(false_positive, true_positive, label=f"{name} ({roc_auc_score(labels, risk):.2f})", **style)
+        roc.plot(false_positive, true_positive, label=f"{name} ({roc_auc_score(labels, risk):.2f})", **line)
         precision, recall, _ = precision_recall_curve(labels, risk)
-        pr.plot(recall, precision, label=f"{name} ({average_precision_score(labels, risk):.2f})", **style)
-    roc.plot([0, 1], [0, 1], color=plots.AXIS, linewidth=1)
+        pr.plot(recall, precision, label=f"{name} ({average_precision_score(labels, risk):.2f})", **line)
+    roc.plot([0, 1], [0, 1], color=style.AXIS, linewidth=1)
     roc.set(title="ROC curve (area in brackets)", xlabel="False positive rate", ylabel="True positive rate")
-    pr.axhline(labels.mean(), color=plots.AXIS, linewidth=1)
+    pr.axhline(labels.mean(), color=style.AXIS, linewidth=1)
     pr.set(title="Precision-recall curve (area in brackets)", xlabel="Recall", ylabel="Precision", ylim=(0, 1))
     for axis in (roc, pr):
         axis.grid(True)
         axis.legend(frameon=False, fontsize=9)
     fig.suptitle("Cross-validated predictions of future cognitive impairment", x=0.02, ha="left", fontweight="bold")
     fig.tight_layout()
-    fig.savefig(plots.RESULTS_DIR / filename, dpi=150)
+    fig.savefig(RESULTS_DIR / filename, dpi=150)
     plt.close(fig)
 
 
@@ -229,10 +230,10 @@ def main() -> None:
 
     text = "\n".join(lines)
     print("\n" + text)
-    plots.RESULTS_DIR.mkdir(exist_ok=True)
-    (plots.RESULTS_DIR / f"{data_dir.name}_baseline_report.txt").write_text(text + "\n")
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    (RESULTS_DIR / f"{data_dir.name}_baseline_report.txt").write_text(text + "\n")
     plot_curves(labels, risks, f"{data_dir.name}_baseline_curves.png")
-    print(f"\nSaved {data_dir.name}_baseline_report.txt and {data_dir.name}_baseline_curves.png to {plots.RESULTS_DIR.resolve()}")
+    print(f"\nSaved {data_dir.name}_baseline_report.txt and {data_dir.name}_baseline_curves.png to {RESULTS_DIR.resolve()}")
 
 
 if __name__ == "__main__":

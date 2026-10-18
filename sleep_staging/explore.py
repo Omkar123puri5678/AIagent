@@ -1,6 +1,6 @@
-"""Look at one raw recording step by step:  python explore.py [recording]
+"""Look at one raw recording step by step:  python -m sleep_staging.explore [recording]
 
-Prints the recording's details and saves these to results/explore/<recording>/:
+Prints the recording's details and saves these to results/sleep_staging/explore/<recording>/:
   01_raw_signals.png      every channel, first 10 seconds
   02_filtered.png         before and after a 1-40 Hz band-pass filter
   03_rereferenced.png     before and after average re-referencing
@@ -19,8 +19,9 @@ import pandas as pd
 from matplotlib.colors import LinearSegmentedColormap
 from scipy.signal import welch
 
-from plots import BLUE, BLUE_RAMP, INK_MUTED, INK_SECONDARY, ORANGE, RESULTS_DIR, plt
-from preprocess import EPOCH_SAMPLES, STAGE_NAMES, UNSCORED, WAKE_MARGIN_EPOCHS, epoch_labels, find_recordings
+from common.style import BLUE, BLUE_RAMP, INK_MUTED, INK_SECONDARY, ORANGE, plt
+from sleep_staging.plots import RESULTS_DIR
+from sleep_staging.preprocess import EPOCH_SAMPLES, STAGE_NAMES, UNSCORED, WAKE_MARGIN_EPOCHS, epoch_labels, find_recordings
 
 EEG_CHANNELS = ["EEG Fpz-Cz", "EEG Pz-Oz"]
 FILTERED_CHANNELS = EEG_CHANNELS + ["EOG horizontal"]

@@ -1,4 +1,4 @@
-"""Train the sleep-stage model on the preprocessed data:  python train.py"""
+"""Train the sleep-stage model on the preprocessed data:  python -m sleep_staging.train"""
 
 import csv
 import math
@@ -8,11 +8,10 @@ import time
 import torch
 import torch.nn.functional as F
 
-import config
-import plots
-from dataset import BatchSampler, class_weights, load_recordings, split_recordings
-from evaluate import confusion_matrix, metrics, report
-from model import SleepStager
+from sleep_staging import config, plots
+from sleep_staging.dataset import BatchSampler, class_weights, load_recordings, split_recordings
+from sleep_staging.evaluate import confusion_matrix, metrics, report
+from sleep_staging.model import SleepStager
 
 
 def learning_rate(step: int, total_steps: int) -> float:
@@ -22,7 +21,7 @@ def learning_rate(step: int, total_steps: int) -> float:
 
 def main() -> None:
     if not (config.DATA_DIR / "index.csv").exists():
-        sys.exit(f"No preprocessed data in {config.DATA_DIR}. Run `python preprocess.py` first.")
+        sys.exit(f"No preprocessed data in {config.DATA_DIR}. Run `python -m sleep_staging.preprocess` first.")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     torch.manual_seed(config.SEED)
 
@@ -46,7 +45,7 @@ def main() -> None:
     total_steps = config.MAX_EPOCHS * config.STEPS_PER_EPOCH
     best_f1, epochs_since_best = 0.0, 0
     config.CHECKPOINT_FILE.parent.mkdir(parents=True, exist_ok=True)
-    plots.RESULTS_DIR.mkdir(exist_ok=True)
+    plots.RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     with open(plots.HISTORY_FILE, "w", newline="") as file:
         csv.writer(file).writerow(["epoch", "loss", "val_accuracy", "val_macro_f1"])
     started = time.time()

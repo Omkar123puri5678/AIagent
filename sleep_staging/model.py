@@ -3,7 +3,7 @@
 import torch
 import torch.nn as nn
 
-import config
+from sleep_staging import config
 
 
 def _conv_block(in_channels: int, out_channels: int, kernel_size: int, **kwargs) -> nn.Sequential:

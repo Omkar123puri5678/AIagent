@@ -1,6 +1,6 @@
 """Turn the PhysioNet Challenge 2026 recordings into one row of features per night:
 
-    python hsp_features.py <path to the Challenge 2026 data>
+    python -m cognitive.features <path to the Challenge 2026 data>
 
 The recordings (a subset of the Human Sleep Project) are about 1.2 TB, so they are streamed
 one night at a time and only a small table, hsp_features.csv, is kept. Join it to the dataset's demographics.csv (age, sex,

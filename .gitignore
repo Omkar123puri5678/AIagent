@@ -8,5 +8,5 @@ data/sleep_edf/*.npz
 data/hsp/
 data/hsp_large/
 checkpoints/cognitive_model.joblib
-# Stray clone of this repository
-AI/
+# Generated Kaggle notebooks (kaggle/build_notebook.py)
+build/

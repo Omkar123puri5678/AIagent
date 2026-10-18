@@ -1,8 +1,8 @@
-"""A simple baseline to compare the neural network against:  python baseline.py
+"""A simple baseline to compare the neural network against:  python -m sleep_staging.baseline
 
 Logistic regression on the hand-made features from features.py, trained and tested on
 the same subject-wise split as the neural network. Saves its scores and confusion matrix
-to results/.
+to results/sleep_staging/.
 """
 
 import sys
@@ -13,16 +13,15 @@ from sklearn.metrics import confusion_matrix
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
-import config
-import plots
-from dataset import split_recordings
-from evaluate import report
-from features import FEATURES_FILE
+from sleep_staging import config, plots
+from sleep_staging.dataset import split_recordings
+from sleep_staging.evaluate import report
+from sleep_staging.features import FEATURES_FILE
 
 
 def main() -> None:
     if not FEATURES_FILE.exists():
-        sys.exit(f"No {FEATURES_FILE}. Run `python features.py` first.")
+        sys.exit(f"No {FEATURES_FILE}. Run `python -m sleep_staging.features` first.")
     table = pd.read_csv(FEATURES_FILE)
     feature_names = [c for c in table.columns if c not in ("recording", "subject", "epoch", "stage")]
 
@@ -40,7 +39,7 @@ def main() -> None:
     text = report(matrix)
     print(f"\nTest set results for logistic regression:\n{text}")
 
-    plots.RESULTS_DIR.mkdir(exist_ok=True)
+    plots.RESULTS_DIR.mkdir(parents=True, exist_ok=True)
     (plots.RESULTS_DIR / "baseline_report.txt").write_text(text + "\n")
     plots.plot_confusion_matrix(
         matrix, title="Test set: logistic regression baseline", filename="baseline_confusion_matrix.png"

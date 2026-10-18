@@ -6,7 +6,7 @@ import random
 import numpy as np
 import torch
 
-import config
+from sleep_staging import config
 
 Recording = tuple[np.ndarray, np.ndarray]  # x: (epochs, channels, samples) float16, y: (epochs,) int64
 

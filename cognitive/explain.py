@@ -1,10 +1,10 @@
-"""Explain the cognitive impairment predictions:  python hsp_explain.py [data folder]
+"""Explain the cognitive impairment predictions:  python -m cognitive.explain [data folder]
 
-Uses the random forest from hsp_baseline.py and SHAP values, which split each person's
+Uses the random forest from cognitive/baseline.py and SHAP values, which split each person's
 predicted risk into a contribution from every feature. Everything is computed out of
 fold: each person is scored and explained by a model that was trained without them.
 
-Saves to results/ (prefixed with the data folder's name, data/hsp by default):
+Saves to results/cognitive/ (prefixed with the data folder's name, data/hsp by default):
   - _importance.png: the features that move the predictions most, and in which direction,
   - _explanations.txt: that ranking, how many people in each risk group (low, moderate,
     high) went on to develop impairment, and worked examples for individual people.
@@ -19,9 +19,10 @@ import shap
 from sklearn.base import clone
 from sklearn.model_selection import StratifiedKFold
 
-import plots
-from hsp_baseline import DEFAULT_DATA_DIR, FOLDS, SEED, load_table, make_models
-from plots import plt
+from cognitive import RESULTS_DIR
+from cognitive.baseline import DEFAULT_DATA_DIR, FOLDS, SEED, load_table, make_models
+from common import style
+from common.style import plt
 
 TOP_FEATURES = 15
 # Risk groups by rank: the 10% of people at highest predicted risk, the next 20%, and the rest.
@@ -62,16 +63,16 @@ def directions(table: pd.DataFrame, names: list[str], contributions: np.ndarray)
 def plot_importance(names: list[str], importance: np.ndarray, signs: np.ndarray, filename: str) -> None:
     order = np.argsort(importance)[-TOP_FEATURES:]
     fig, axis = plt.subplots(figsize=(8, 5.2))
-    colours = [plots.ORANGE if signs[i] > 0 else plots.BLUE for i in order]
+    colours = [style.ORANGE if signs[i] > 0 else style.BLUE for i in order]
     axis.barh([names[i] for i in order], importance[order], color=colours, height=0.7)
     axis.set(title="What moves the predicted risk of cognitive impairment",
              xlabel="Average change in predicted risk (mean |SHAP value|)")
     axis.grid(True, axis="x")
     axis.set_axisbelow(True)
-    handles = [plt.Rectangle((0, 0), 1, 1, color=plots.ORANGE), plt.Rectangle((0, 0), 1, 1, color=plots.BLUE)]
+    handles = [plt.Rectangle((0, 0), 1, 1, color=style.ORANGE), plt.Rectangle((0, 0), 1, 1, color=style.BLUE)]
     axis.legend(handles, ["higher value, higher risk", "higher value, lower risk"], frameon=False, loc="lower right")
     fig.tight_layout()
-    fig.savefig(plots.RESULTS_DIR / filename, dpi=150)
+    fig.savefig(RESULTS_DIR / filename, dpi=150)
     plt.close(fig)
 
 
@@ -120,10 +121,10 @@ def main() -> None:
 
     text = "\n".join(lines)
     print("\n" + text)
-    plots.RESULTS_DIR.mkdir(exist_ok=True)
-    (plots.RESULTS_DIR / f"{data_dir.name}_explanations.txt").write_text(text + "\n")
+    RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    (RESULTS_DIR / f"{data_dir.name}_explanations.txt").write_text(text + "\n")
     plot_importance(names, importance, signs, f"{data_dir.name}_importance.png")
-    print(f"\nSaved {data_dir.name}_explanations.txt and {data_dir.name}_importance.png to {plots.RESULTS_DIR.resolve()}")
+    print(f"\nSaved {data_dir.name}_explanations.txt and {data_dir.name}_importance.png to {RESULTS_DIR.resolve()}")
 
 
 if __name__ == "__main__":

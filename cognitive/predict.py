@@ -1,13 +1,13 @@
 """Use the cognitive impairment model on a new person.
 
-    python predict.py train data/hsp_large
-        Fits the logistic regression from hsp_baseline.py on everyone in the table and saves it
+    python -m cognitive.predict train data/hsp_large
+        Fits the logistic regression from cognitive/baseline.py on everyone in the table and saves it
         to checkpoints/cognitive_model.joblib.
 
-    python predict.py night <recording.edf> <caisr_annotations.edf> --age 67 --sex female
-        Measures the night the same way hsp_features.py does and prints the person's risk.
+    python -m cognitive.predict night <recording.edf> <caisr_annotations.edf> --age 67 --sex female
+        Measures the night the same way cognitive/features.py does and prints the person's risk.
 
-    python predict.py table data/hsp_large/hsp_features.csv <record> --age 67 --sex female
+    python -m cognitive.predict table data/hsp_large/hsp_features.csv <record> --age 67 --sex female
         The same for a night already in a feature table (no raw recording needed).
 
 The model is trained with the rare impaired class weighted up, so its raw probability is
@@ -28,9 +28,9 @@ import pandas as pd
 from sklearn.base import clone
 from sklearn.model_selection import StratifiedKFold, cross_val_predict
 
-import hsp_features
-from hsp_baseline import FOLDS, MIN_SLEEP_MINUTES, SEED, load_table, make_models
-from hsp_explain import HIGH_SHARE, MODERATE_SHARE
+from cognitive import features as night_features
+from cognitive.baseline import FOLDS, MIN_SLEEP_MINUTES, SEED, load_table, make_models
+from cognitive.explain import HIGH_SHARE, MODERATE_SHARE
 
 MODEL_FILE = Path("checkpoints/cognitive_model.joblib")
 QUANTILES = np.linspace(0, 1, 101)
@@ -70,12 +70,12 @@ def train(data_dir: Path) -> None:
 
 
 def measure_night(recording: Path, caisr_file: Path) -> dict:
-    """The per-night features of hsp_features.process, for files outside the Challenge folder layout."""
-    stages = hsp_features.epoch_stages(caisr := hsp_features.load(caisr_file))
-    row = hsp_features.architecture_features(stages) | hsp_features.event_features(caisr, stages)
-    signals = hsp_features.load(recording)
-    for extract in (hsp_features.eeg_features, hsp_features.ecg_features, hsp_features.spo2_features,
-                    hsp_features.breathing_features, hsp_features.chin_features):
+    """The per-night features of night_features.process, for files outside the Challenge folder layout."""
+    stages = night_features.epoch_stages(caisr := night_features.load(caisr_file))
+    row = night_features.architecture_features(stages) | night_features.event_features(caisr, stages)
+    signals = night_features.load(recording)
+    for extract in (night_features.eeg_features, night_features.ecg_features, night_features.spo2_features,
+                    night_features.breathing_features, night_features.chin_features):
         try:
             row |= extract(signals, stages)
         except Exception as error:
@@ -89,7 +89,7 @@ def percentile(quantiles: np.ndarray, risk: float) -> float:
 
 def report(features: dict, age: float, sex: str) -> None:
     if not MODEL_FILE.exists():
-        sys.exit(f"No {MODEL_FILE}. Run: python predict.py train data/hsp_large")
+        sys.exit(f"No {MODEL_FILE}. Run: python -m cognitive.predict train data/hsp_large")
     saved = joblib.load(MODEL_FILE)
     names, model = saved["names"], saved["model"]
     person = pd.DataFrame([{**features, "Age": age, "male": float(sex.lower().startswith("m"))}]).reindex(columns=names)
@@ -131,7 +131,7 @@ def main() -> None:
     night.add_argument("recording", type=Path)
     night.add_argument("caisr", type=Path, help="the night's CAISR annotations EDF")
     table = commands.add_parser("table")
-    table.add_argument("features", type=Path, help="a feature table from hsp_features.py")
+    table.add_argument("features", type=Path, help="a feature table from cognitive/features.py")
     table.add_argument("record", help="the night's record name, e.g. sub-I0002150028100_ses-1")
     for command in (night, table):
         command.add_argument("--age", type=float, required=True)

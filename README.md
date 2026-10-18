@@ -90,8 +90,8 @@ baseline, because age alone already predicts impairment.
 | F1 | 0.901 | 0.579 | 0.840 | 0.802 | 0.877 |
 
 <p align="center">
-  <img src="results/hypnogram_SC4081E.png" width="49%" alt="Hypnogram: expert scoring vs model">
-  <img src="results/confusion_matrix.png" width="49%" alt="Sleep-stage confusion matrix">
+  <img src="results/sleep_staging/hypnogram_SC4081E.png" width="49%" alt="Hypnogram: expert scoring vs model">
+  <img src="results/sleep_staging/confusion_matrix.png" width="49%" alt="Sleep-stage confusion matrix">
 </p>
 
 ### Stage 2: cognitive impairment
@@ -110,10 +110,10 @@ its 1st and 99th percentile so a few broken recordings cannot dominate it.
 > **Why age-conditioned?** It only compares people within 2 years of age of each other, so it
 > measures what sleep adds beyond age. 0.5 = guessing. Random forest and XGBoost were also
 > tested; logistic regression was the most robust. Full numbers are in
-> [`results/hsp_large_baseline_report.txt`](results/hsp_large_baseline_report.txt).
+> [`results/cognitive/hsp_large_baseline_report.txt`](results/cognitive/hsp_large_baseline_report.txt).
 
 <p align="center">
-  <img src="results/hsp_large_importance.png" width="70%" alt="SHAP feature importance">
+  <img src="results/cognitive/hsp_large_importance.png" width="70%" alt="SHAP feature importance">
 </p>
 
 The strongest sleep signals are **reduced sleep-spindle (sigma) power**, **more limb
@@ -148,13 +148,13 @@ pip install -r requirements.txt
 ### Stage 1: sleep staging
 
 ```powershell
-python preprocess.py   # raw recordings -> labelled epochs in data/sleep_edf/
-python train.py        # train, save the best model to checkpoints/
-python evaluate.py     # score the saved model on the held-out test subjects
-python plots.py        # result images in results/
-python explore.py      # one recording: raw signals, filtering, spectrum, time-frequency
-python features.py     # band-power and Hjorth features for every epoch
-python baseline.py     # logistic regression baseline on those features
+python -m sleep_staging.preprocess   # raw recordings -> labelled epochs in data/sleep_edf/
+python -m sleep_staging.train        # train, save the best model to checkpoints/
+python -m sleep_staging.evaluate     # score the saved model on the held-out test subjects
+python -m sleep_staging.plots        # result images in results/sleep_staging/
+python -m sleep_staging.explore      # one recording: raw signals, filtering, spectrum, time-frequency
+python -m sleep_staging.features     # band-power and Hjorth features for every epoch
+python -m sleep_staging.baseline     # logistic regression baseline on those features
 ```
 
 ### Stage 2: cognitive impairment
@@ -163,22 +163,31 @@ The Challenge data is about 1.2 TB, so feature extraction streams it one night a
 (parallel workers, checkpointed, optionally sharded) and keeps only a small table:
 
 ```powershell
-python hsp_features.py <path to Challenge 2026 data> --out hsp_features.csv
+python -m cognitive.features <path to Challenge 2026 data> --out hsp_features.csv
+```
+
+In practice the extraction runs on Kaggle, where the data is already mounted, so it never has
+to be downloaded. [`kaggle/build_notebook.py`](kaggle/build_notebook.py) packs the code into a
+notebook for each heavy step (`features`, `epochs`, `deep`):
+
+```powershell
+python kaggle/build_notebook.py features build/hsp-features-large
+kaggle kernels push -p build/hsp-features-large
 ```
 
 Put `hsp_features.csv` and the dataset's `demographics.csv` in `data/hsp_large/`, then:
 
 ```powershell
-python hsp_baseline.py data/hsp_large   # age only, logistic regression, random forest, XGBoost
-python hsp_explain.py data/hsp_large    # SHAP explanations, risk groups, worked examples
+python -m cognitive.baseline data/hsp_large   # age only, logistic regression, random forest, XGBoost
+python -m cognitive.explain data/hsp_large    # SHAP explanations, risk groups, worked examples
 ```
 
 ### Score a new night
 
 ```powershell
-python predict.py train data/hsp_large   # fit the final model, save checkpoints/cognitive_model.joblib
-python predict.py night <recording.edf> <caisr_annotations.edf> --age 67 --sex female
-python predict.py table data/hsp_large/hsp_features.csv <record> --age 67 --sex female
+python -m cognitive.predict train data/hsp_large   # fit the final model, save checkpoints/cognitive_model.joblib
+python -m cognitive.predict night <recording.edf> <caisr_annotations.edf> --age 67 --sex female
+python -m cognitive.predict table data/hsp_large/hsp_features.csv <record> --age 67 --sex female
 ```
 
 The output gives a risk score, the person's rank overall and among people of the same age, their
@@ -187,26 +196,37 @@ group were later impaired, against 2.8% of the low group.
 
 ## Project structure
 
+All commands run from the project root (`python -m <package>.<script>`).
+
 ```
-├── config.py            Model size and training settings
-├── preprocess.py        Filter, epoch, label and normalise Sleep-EDF recordings
-├── dataset.py           Subject-wise train/val/test split and batching
-├── model.py             CNN per epoch + bidirectional GRU across epochs
-├── train.py             Training loop, early stopping, test report
-├── evaluate.py          Accuracy, macro F1, Cohen's kappa, confusion matrix
-├── plots.py             Result figures
-├── explore.py           Step-by-step look at one raw recording
-├── features.py          Hand-made epoch features (band power, Hjorth)
-├── baseline.py          Logistic regression baseline for sleep staging
-├── hsp_features.py      49 measurements per night from Challenge 2026 data
-├── hsp_baseline.py      Impairment models, cross-validation, leave-one-hospital-out
-├── hsp_explain.py       SHAP explanations and risk groups
-├── predict.py           Save the final model and score a new night
-├── demo.html            Results presentation
-├── design.html          Block diagram, design flow and architecture
-├── checkpoints/         Trained sleep-stage network
-├── data/                Small summary tables
-└── results/             Figures and reports
+├── sleep_staging/          Part 1: sleep staging on Sleep-EDF
+│   ├── config.py           Model size and training settings
+│   ├── preprocess.py       Filter, epoch, label and normalise the recordings
+│   ├── explore.py          Step-by-step look at one raw recording
+│   ├── dataset.py          Subject-wise train/val/test split and batching
+│   ├── model.py            CNN per epoch + bidirectional GRU across epochs
+│   ├── train.py            Training loop, early stopping, test report
+│   ├── evaluate.py         Accuracy, macro F1, Cohen's kappa, confusion matrix
+│   ├── plots.py            Result figures
+│   ├── features.py         Hand-made epoch features (band power, Hjorth)
+│   └── baseline.py         Logistic regression baseline for sleep staging
+│
+├── cognitive/              Part 2: cognitive impairment from Challenge 2026 PSG
+│   ├── features.py         49 measurements per night (streams the 1.2 TB data)
+│   ├── baseline.py         Age-only, logistic regression, RF, XGBoost; CV and leave-one-hospital-out
+│   ├── explain.py          SHAP explanations and risk groups
+│   ├── predict.py          Save the final model and score a new night
+│   ├── epochs.py           One row of numbers per 30 s epoch, for the deep model
+│   └── deep.py             CNN + attention over the whole night (in progress)
+│
+├── common/style.py         Colours and plot settings shared by both parts
+├── kaggle/                 Builds the Kaggle notebooks that run next to the data
+├── docs/                   demo.html (results), design.html (architecture), report.html (Part 1 report)
+├── results/
+│   ├── sleep_staging/      Part 1 figures and reports
+│   └── cognitive/          Part 2 figures and reports (hsp_ = small set, hsp_large_ = large set)
+├── checkpoints/            Trained sleep-stage network
+└── data/                   Small summary tables (raw data is not in the repository)
 ```
 
 ## Limitations

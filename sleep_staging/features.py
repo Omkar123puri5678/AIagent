@@ -1,4 +1,4 @@
-"""Compute hand-made features for every 30-second epoch:  python features.py
+"""Compute hand-made features for every 30-second epoch:  python -m sleep_staging.features
 
 For each channel this measures
   - band power in the delta, theta, alpha and beta bands (area under the Welch power
@@ -17,8 +17,8 @@ import pandas as pd
 from scipy.integrate import simpson
 from scipy.signal import welch
 
-import config
-from preprocess import CHANNELS, SAMPLE_RATE
+from sleep_staging import config
+from sleep_staging.preprocess import CHANNELS, SAMPLE_RATE
 
 FEATURES_FILE = config.DATA_DIR.parent / "features.csv"
 
@@ -53,7 +53,7 @@ def hjorth_parameters(x: np.ndarray) -> dict[str, np.ndarray]:
 def main() -> None:
     index_file = config.DATA_DIR / "index.csv"
     if not index_file.exists():
-        sys.exit(f"No preprocessed data in {config.DATA_DIR}. Run `python preprocess.py` first.")
+        sys.exit(f"No preprocessed data in {config.DATA_DIR}. Run `python -m sleep_staging.preprocess` first.")
     index = pd.read_csv(index_file)
 
     tables = []

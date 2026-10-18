@@ -1,4 +1,4 @@
-"""Turn the raw Sleep-EDF recordings into labelled 30-second epochs:  python preprocess.py
+"""Turn the raw Sleep-EDF recordings into labelled 30-second epochs:  python -m sleep_staging.preprocess
 
 For every recording this
   1. reads the two EEG channels and the EOG channel (all sampled at 100 Hz),

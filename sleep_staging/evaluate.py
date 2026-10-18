@@ -1,13 +1,13 @@
-"""Score the trained model on the held-out test subjects:  python evaluate.py"""
+"""Score the trained model on the held-out test subjects:  python -m sleep_staging.evaluate"""
 
 import sys
 
 import numpy as np
 import torch
 
-import config
-from dataset import Recording, load_recordings, split_recordings
-from model import SleepStager
+from sleep_staging import config
+from sleep_staging.dataset import Recording, load_recordings, split_recordings
+from sleep_staging.model import SleepStager
 
 EVAL_CHUNKS = 8  # sequences per forward pass when scoring a whole recording
 
@@ -70,7 +70,7 @@ def report(matrix: np.ndarray) -> str:
 
 def main() -> None:
     if not config.CHECKPOINT_FILE.exists():
-        sys.exit("No trained model found. Run `python train.py` first.")
+        sys.exit("No trained model found. Run `python -m sleep_staging.train` first.")
     device = "cuda" if torch.cuda.is_available() else "cpu"
     checkpoint = torch.load(config.CHECKPOINT_FILE, map_location=device)
     model = SleepStager().to(device)

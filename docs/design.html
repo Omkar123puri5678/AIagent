@@ -159,11 +159,11 @@ sleep stages supplied with the dataset; the plan is to replace them with our Par
 <div class="table-wrap">
 <table>
   <tr><th>Block</th><th>Input</th><th>Output</th><th>Code</th></tr>
-  <tr><td>Preprocessing</td><td>Raw EDF recording</td><td>Filtered, normalised 30-s epochs</td><td><code>preprocess.py</code></td></tr>
-  <tr><td>Sleep-stage network</td><td>20 epochs × 3 channels × 3,000 samples</td><td>One of 5 stages per epoch</td><td><code>model.py</code>, <code>train.py</code></td></tr>
-  <tr><td>Feature extraction</td><td>One night's signals + CAISR annotations</td><td>49 numbers per night</td><td><code>hsp_features.py</code></td></tr>
-  <tr><td>Risk model</td><td>51 numbers (49 + age + sex)</td><td>Risk between 0 and 1</td><td><code>hsp_baseline.py</code></td></tr>
-  <tr><td>SHAP</td><td>Risk model + one person's numbers</td><td>Contribution of each input to the risk</td><td><code>hsp_explain.py</code></td></tr>
+  <tr><td>Preprocessing</td><td>Raw EDF recording</td><td>Filtered, normalised 30-s epochs</td><td><code>sleep_staging/preprocess.py</code></td></tr>
+  <tr><td>Sleep-stage network</td><td>20 epochs × 3 channels × 3,000 samples</td><td>One of 5 stages per epoch</td><td><code>sleep_staging/model.py</code>, <code>sleep_staging/train.py</code></td></tr>
+  <tr><td>Feature extraction</td><td>One night's signals + CAISR annotations</td><td>49 numbers per night</td><td><code>cognitive/features.py</code></td></tr>
+  <tr><td>Risk model</td><td>51 numbers (49 + age + sex)</td><td>Risk between 0 and 1</td><td><code>cognitive/baseline.py</code></td></tr>
+  <tr><td>SHAP</td><td>Risk model + one person's numbers</td><td>Contribution of each input to the risk</td><td><code>cognitive/explain.py</code></td></tr>
 </table>
 </div>
 
@@ -493,30 +493,30 @@ pip install -r requirements.txt</code></pre>
 <h3>B. Part 1: sleep-stage network</h3>
 <ol class="steps">
   <li><strong>Get the data:</strong> download Sleep-EDF Expanded from PhysioNet into <code>Dataset/</code>.</li>
-  <li><strong>Preprocess:</strong> <code>python preprocess.py</code> filters, cuts into epochs and normalises every recording into <code>data/sleep_edf/</code>.</li>
-  <li><strong>Train:</strong> <code>python train.py</code> trains the CNN + GRU with early stopping and saves the best model to <code>checkpoints/sleep_stager.pt</code>.</li>
-  <li><strong>Evaluate:</strong> <code>python evaluate.py</code> scores the saved model on the 20 test recordings.</li>
-  <li><strong>Plots:</strong> <code>python plots.py</code> draws the confusion matrix, training curves and hypnogram.</li>
-  <li><strong>Baseline:</strong> <code>python features.py</code> then <code>python baseline.py</code> for the logistic-regression comparison.</li>
+  <li><strong>Preprocess:</strong> <code>python -m sleep_staging.preprocess</code> filters, cuts into epochs and normalises every recording into <code>data/sleep_edf/</code>.</li>
+  <li><strong>Train:</strong> <code>python -m sleep_staging.train</code> trains the CNN + GRU with early stopping and saves the best model to <code>checkpoints/sleep_stager.pt</code>.</li>
+  <li><strong>Evaluate:</strong> <code>python -m sleep_staging.evaluate</code> scores the saved model on the 20 test recordings.</li>
+  <li><strong>Plots:</strong> <code>python -m sleep_staging.plots</code> draws the confusion matrix, training curves and hypnogram.</li>
+  <li><strong>Baseline:</strong> <code>python -m sleep_staging.features</code> then <code>python -m sleep_staging.baseline</code> for the logistic-regression comparison.</li>
 </ol>
 
 <h3>C. Part 2: cognitive impairment risk</h3>
 <ol class="steps">
   <li><strong>Extract features:</strong> with the Challenge 2026 dataset available,
-    run <code>python hsp_features.py &lt;path to the data&gt;</code>. It writes
+    run <code>python -m cognitive.features &lt;path to the data&gt;</code>. It writes
     <code>hsp_features.csv</code>, one row per night (about 3 hours for the large set).</li>
   <li><strong>Collect the table:</strong> put <code>hsp_features.csv</code> and the dataset's
     <code>demographics.csv</code> in <code>data/hsp_large/</code>.</li>
-  <li><strong>Train and test the models:</strong> <code>python hsp_baseline.py data/hsp_large</code> runs
+  <li><strong>Train and test the models:</strong> <code>python -m cognitive.baseline data/hsp_large</code> runs
     cross-validation and leave-one-hospital-out for all four models.</li>
-  <li><strong>Explain:</strong> <code>python hsp_explain.py data/hsp_large</code> computes SHAP values, risk
+  <li><strong>Explain:</strong> <code>python -m cognitive.explain data/hsp_large</code> computes SHAP values, risk
     groups and worked examples.</li>
-  <li><strong>Results</strong> are saved in <code>results/</code> with the prefix <code>hsp_large_</code>.</li>
+  <li><strong>Results</strong> are saved in <code>results/cognitive/</code> with the prefix <code>hsp_large_</code>.</li>
 </ol>
 
 <h3>D. Present</h3>
 <p>Open <a href="demo.html">demo.html</a> for the results and this page for the design. Both read their
-images from the <code>results/</code> folder, so keep the project folder together.</p>
+images from the project's <code>results/</code> folder, so keep the project folder together.</p>
 
 </main>
 </body>

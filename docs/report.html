@@ -49,7 +49,7 @@ saw in training, it agrees with the expert scoring on 82.4% of epochs.</p>
 
 <h2>1. Dataset and preprocessing</h2>
 <p>The raw data is 197 overnight recordings (153 from the cassette study, 44 from the telemetry study),
-8.1 GB of EDF files, each with an expert-scored hypnogram. <code>preprocess.py</code> does the following
+8.1 GB of EDF files, each with an expert-scored hypnogram. <code>sleep_staging/preprocess.py</code> does the following
 to every recording:</p>
 <table>
   <tr><th>Step</th><th>What it does</th></tr>
@@ -74,29 +74,29 @@ to every recording:</p>
 </table>
 
 <h2>2. Looking at one recording</h2>
-<p><code>explore.py</code> reproduces the signal-analysis steps of the Colab notebook on recording
+<p><code>sleep_staging/explore.py</code> reproduces the signal-analysis steps of the Colab notebook on recording
 SC4001E (22.1 hours, 7 channels, 100 Hz).</p>
 
 <figure>
-  <img src="results/explore/SC4001E/01_raw_signals.png" alt="Raw signals of all seven channels, first 10 seconds">
+  <img src="../results/sleep_staging/explore/SC4001E/01_raw_signals.png" alt="Raw signals of all seven channels, first 10 seconds">
   <figcaption>All seven channels, first 10 seconds.</figcaption>
 </figure>
 <figure>
-  <img src="results/explore/SC4001E/02_filtered.png" alt="EEG and EOG before and after a 1 to 40 Hz band-pass filter">
+  <img src="../results/sleep_staging/explore/SC4001E/02_filtered.png" alt="EEG and EOG before and after a 1 to 40 Hz band-pass filter">
   <figcaption>Band-pass filter, 1–40 Hz: slow drift is removed, the fast detail is kept.</figcaption>
 </figure>
 <figure>
-  <img src="results/explore/SC4001E/03_rereferenced.png" alt="EEG channels before and after average re-referencing">
+  <img src="../results/sleep_staging/explore/SC4001E/03_rereferenced.png" alt="EEG channels before and after average re-referencing">
   <figcaption>Average re-referencing. With only two EEG channels each becomes a mirror image of the other,
   so this step is shown but not used for the model.</figcaption>
 </figure>
 <figure>
-  <img src="results/explore/SC4001E/04_power_spectrum.png" alt="Power spectral density, overall and by sleep stage">
+  <img src="../results/sleep_staging/explore/SC4001E/04_power_spectrum.png" alt="Power spectral density, overall and by sleep stage">
   <figcaption>Power spectrum. The stages differ: N3 has the most slow-wave power, N2 shows a bump near
   13 Hz (sleep spindles), and wake keeps the most power at high frequencies.</figcaption>
 </figure>
 <figure>
-  <img src="results/explore/SC4001E/05_time_frequency.png" alt="Morlet wavelet power through the night under the hypnogram">
+  <img src="../results/sleep_staging/explore/SC4001E/05_time_frequency.png" alt="Morlet wavelet power through the night under the hypnogram">
   <figcaption>Wavelet power through the sleep period, lined up under the expert's hypnogram.</figcaption>
 </figure>
 
@@ -113,7 +113,7 @@ SC4001E (22.1 hours, 7 channels, 100 Hz).</p>
   <tr><td>Stopping</td><td>Stopped early at epoch 17; the saved model is from epoch 11, the best on validation</td></tr>
 </table>
 <figure>
-  <img src="results/training_curves.png" alt="Training loss and validation scores per epoch">
+  <img src="../results/sleep_staging/training_curves.png" alt="Training loss and validation scores per epoch">
   <figcaption>Training loss and validation scores per epoch.</figcaption>
 </figure>
 
@@ -129,17 +129,17 @@ SC4001E (22.1 hours, 7 channels, 100 Hz).</p>
 <p>N1 is the weak stage: 21% of true N1 epochs are scored as N2 and 11% as wake. The other main
 confusion is N2 scored as N3 (11%).</p>
 <figure>
-  <img src="results/confusion_matrix.png" alt="Confusion matrix of the neural network on the test set">
+  <img src="../results/sleep_staging/confusion_matrix.png" alt="Confusion matrix of the neural network on the test set">
   <figcaption>Neural network, test set.</figcaption>
 </figure>
 <figure>
-  <img src="results/hypnogram_SC4081E.png" alt="One night scored by an expert and by the model">
+  <img src="../results/sleep_staging/hypnogram_SC4081E.png" alt="One night scored by an expert and by the model">
   <figcaption>One test night: the model agrees with the expert on 87.1% of epochs.</figcaption>
 </figure>
 
 <h2>5. Classical baseline</h2>
-<p><code>features.py</code> computes 21 hand-made features per epoch (delta, theta, alpha and beta band
-power plus the three Hjorth parameters, for each of the three channels). <code>baseline.py</code> trains
+<p><code>sleep_staging/features.py</code> computes 21 hand-made features per epoch (delta, theta, alpha and beta band
+power plus the three Hjorth parameters, for each of the three channels). <code>sleep_staging/baseline.py</code> trains
 logistic regression on them, scored on the same test recordings.</p>
 <table>
   <tr><th></th><th class="num">Logistic regression</th><th class="num">Neural network</th></tr>
@@ -153,33 +153,33 @@ logistic regression on them, scored on the same test recordings.</p>
   <tr><td>REM F1</td><td class="num">0.769</td><td class="num">0.877</td></tr>
 </table>
 <figure>
-  <img src="results/baseline_confusion_matrix.png" alt="Confusion matrix of the logistic regression baseline">
+  <img src="../results/sleep_staging/baseline_confusion_matrix.png" alt="Confusion matrix of the logistic regression baseline">
   <figcaption>Logistic regression baseline, test set.</figcaption>
 </figure>
 
 <h2>6. Files and how to run</h2>
 <table>
   <tr><th>File</th><th>Purpose</th></tr>
-  <tr><td><code>preprocess.py</code></td><td>Raw recordings to labelled epochs</td></tr>
-  <tr><td><code>dataset.py</code></td><td>Subject-wise split and training batches</td></tr>
-  <tr><td><code>model.py</code></td><td>The network</td></tr>
-  <tr><td><code>train.py</code></td><td>Training, early stopping, final test report</td></tr>
-  <tr><td><code>evaluate.py</code></td><td>Test scores for the saved model</td></tr>
-  <tr><td><code>plots.py</code></td><td>Result images</td></tr>
-  <tr><td><code>explore.py</code></td><td>Step-by-step look at one recording</td></tr>
-  <tr><td><code>features.py</code>, <code>baseline.py</code></td><td>Hand-made features and logistic regression</td></tr>
-  <tr><td><code>config.py</code></td><td>Model and training settings</td></tr>
+  <tr><td><code>sleep_staging/preprocess.py</code></td><td>Raw recordings to labelled epochs</td></tr>
+  <tr><td><code>sleep_staging/dataset.py</code></td><td>Subject-wise split and training batches</td></tr>
+  <tr><td><code>sleep_staging/model.py</code></td><td>The network</td></tr>
+  <tr><td><code>sleep_staging/train.py</code></td><td>Training, early stopping, final test report</td></tr>
+  <tr><td><code>sleep_staging/evaluate.py</code></td><td>Test scores for the saved model</td></tr>
+  <tr><td><code>sleep_staging/plots.py</code></td><td>Result images</td></tr>
+  <tr><td><code>sleep_staging/explore.py</code></td><td>Step-by-step look at one recording</td></tr>
+  <tr><td><code>sleep_staging/features.py</code>, <code>sleep_staging/baseline.py</code></td><td>Hand-made features and logistic regression</td></tr>
+  <tr><td><code>sleep_staging/config.py</code></td><td>Model and training settings</td></tr>
 </table>
 <pre><code>.\.venv\Scripts\Activate.ps1
-python preprocess.py
-python train.py
-python evaluate.py
-python plots.py
-python explore.py
-python features.py
-python baseline.py</code></pre>
+python -m sleep_staging.preprocess
+python -m sleep_staging.train
+python -m sleep_staging.evaluate
+python -m sleep_staging.plots
+python -m sleep_staging.explore
+python -m sleep_staging.features
+python -m sleep_staging.baseline</code></pre>
 <p>The trained model is <code>checkpoints/sleep_stager.pt</code>; all images and reports are in
-<code>results/</code>.</p>
+<code>results/sleep_staging/</code>.</p>
 
 <h2>7. Known limits</h2>
 <ul>
