@@ -377,7 +377,6 @@ Total: 2,012,165 trainable parameters.</figcaption>
   <tr><td>Gradient clipping</td><td>5.0</td><td>Stops very large updates that make GRUs unstable</td></tr>
   <tr><td>Early stopping</td><td>Patience 6</td><td>Stop when validation score has not improved for 6 rounds; keep the best model</td></tr>
   <tr><td>Data split</td><td>157 / 20 / 20 recordings</td><td>Train / validation / test, split by person</td></tr>
-  <tr><td>Hardware</td><td>GTX 1650 laptop GPU</td><td>About 9 minutes; stopped at round 17, best at round 11</td></tr>
 </table>
 </div>
 
@@ -469,7 +468,7 @@ latch onto noise in any single input.</p>
 <table>
   <tr><th>Purpose</th><th>Tool</th></tr>
   <tr><td>Language</td><td>Python 3.14</td></tr>
-  <tr><td>Deep learning</td><td>PyTorch (CUDA on GTX 1650)</td></tr>
+  <tr><td>Deep learning</td><td>PyTorch (CUDA)</td></tr>
   <tr><td>Classical ML</td><td>scikit-learn (logistic regression, random forest), XGBoost</td></tr>
   <tr><td>Signal processing</td><td>SciPy (filters, Welch spectra, peak detection), NumPy</td></tr>
   <tr><td>Reading recordings</td><td>MNE (Sleep-EDF), edfio (Challenge EDF files)</td></tr>
