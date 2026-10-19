@@ -5,7 +5,7 @@
 **AI-based prediction of cognitive impairment from one night of polysomnography**
 
 ![Python](https://img.shields.io/badge/Python-3.x-3776AB?logo=python&logoColor=white)
-![PyTorch](https://img.shields.io/badge/PyTorch-CNN%20%2B%20BiGRU-EE4C2C?logo=pytorch&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-CNN%20%2B%20BiGRU%20%2B%20attention-EE4C2C?logo=pytorch&logoColor=white)
 ![scikit-learn](https://img.shields.io/badge/scikit--learn-models-F7931E?logo=scikitlearn&logoColor=white)
 ![SHAP](https://img.shields.io/badge/SHAP-explanations-8A2BE2)
 ![Data](https://img.shields.io/badge/data-PhysioNet-0B5394)
