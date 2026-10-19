@@ -72,7 +72,7 @@ flow followed to build it, the architecture of each model, and a step-by-step gu
 <p>The whole system, from sensors to the final answer. Blue blocks are Part 1 (sleep staging); orange blocks
 are Part 2 (cognitive impairment risk).</p>
 <figure class="diagram">
-<svg viewBox="0 0 960 400" role="img" aria-label="Block diagram: PSG signals go through preprocessing, then to the sleep-stage network producing a hypnogram, and to feature extraction, risk model and SHAP producing a risk score with reasons">
+<svg viewBox="0 0 960 510" role="img" aria-label="Block diagram: PSG signals go through preprocessing, then to the sleep-stage network producing a hypnogram, to feature extraction, risk model and SHAP, and to epoch sequences and a deep network; the two risks are combined in an ensemble that gives a risk score with reasons">
   <defs>
     <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
       <path d="M0,0 L10,5 L0,10 z" fill="#8a8983"/>
@@ -124,7 +124,7 @@ are Part 2 (cognitive impairment risk).</p>
   <text class="lbl" x="580" y="196">future: replace</text>
 
   <!-- part 2 -->
-  <text class="head" x="390" y="392">PART 2</text>
+  <text class="head" x="390" y="500">PART 2</text>
   <rect class="p2" x="390" y="270" width="170" height="100" rx="8"/>
   <text class="t" x="475" y="300" text-anchor="middle">Feature extraction</text>
   <text class="s" x="475" y="320" text-anchor="middle">49 sleep measures</text>
@@ -144,16 +144,32 @@ are Part 2 (cognitive impairment risk).</p>
   <text class="t" x="875" y="192" text-anchor="middle">SHAP</text>
   <text class="s" x="875" y="212" text-anchor="middle">reasons per person</text>
   <rect class="p2" x="800" y="270" width="150" height="100" rx="8"/>
-  <text class="t" x="875" y="300" text-anchor="middle">Output</text>
-  <text class="s" x="875" y="320" text-anchor="middle">risk score 0–1</text>
-  <text class="s" x="875" y="338" text-anchor="middle">low / moderate / high</text>
-  <text class="s" x="875" y="356" text-anchor="middle">+ top reasons</text>
+  <text class="t" x="875" y="298" text-anchor="middle">Ensemble → output</text>
+  <text class="s" x="875" y="318" text-anchor="middle">average of both risks</text>
+  <text class="s" x="875" y="336" text-anchor="middle">risk 0–1, low / mod / high</text>
+  <text class="s" x="875" y="354" text-anchor="middle">+ top reasons</text>
   <path class="wire" d="M760,320 H796" marker-end="url(#arrow)"/>
   <path class="wire" d="M760,295 H780 V200 H796" marker-end="url(#arrow)"/>
   <path class="wire" d="M875,240 V266" marker-end="url(#arrow)"/>
+
+  <!-- deep path -->
+  <rect class="p2" x="390" y="400" width="170" height="80" rx="8"/>
+  <text class="t" x="475" y="428" text-anchor="middle">Epoch sequences</text>
+  <text class="s" x="475" y="448" text-anchor="middle">81 values per 30 s</text>
+  <text class="s" x="475" y="466" text-anchor="middle">up to 1,200 epochs</text>
+  <path class="wire" d="M365,320 V440 H386" marker-end="url(#arrow)"/>
+
+  <rect class="p2" x="610" y="400" width="150" height="80" rx="8"/>
+  <text class="t" x="685" y="428" text-anchor="middle">Deep network</text>
+  <text class="s" x="685" y="448" text-anchor="middle">1D CNN + attention</text>
+  <text class="s" x="685" y="466" text-anchor="middle">+ age, sex</text>
+  <path class="wire" d="M560,440 H606" marker-end="url(#arrow)"/>
+  <path class="wire" d="M760,440 H875 V374" marker-end="url(#arrow)"/>
 </svg>
 <figcaption>Block diagram of the complete system. The dashed link is future work: today Part 2 uses the CAISR
-sleep stages supplied with the dataset; the plan is to replace them with our Part 1 network.</figcaption>
+sleep stages supplied with the dataset; the plan is to replace them with our Part 1 network. Part 2 has two
+paths: 49 hand-made measures into a logistic regression, and the whole night as a sequence into a deep network.
+The ensemble averages their risks.</figcaption>
 </figure>
 
 <div class="table-wrap">
@@ -163,7 +179,9 @@ sleep stages supplied with the dataset; the plan is to replace them with our Par
   <tr><td>Sleep-stage network</td><td>20 epochs × 3 channels × 3,000 samples</td><td>One of 5 stages per epoch</td><td><code>sleep_staging/model.py</code>, <code>sleep_staging/train.py</code></td></tr>
   <tr><td>Feature extraction</td><td>One night's signals + CAISR annotations</td><td>49 numbers per night</td><td><code>cognitive/features.py</code></td></tr>
   <tr><td>Risk model</td><td>51 numbers (49 + age + sex)</td><td>Risk between 0 and 1</td><td><code>cognitive/baseline.py</code></td></tr>
-  <tr><td>Deep model</td><td>Up to 1,200 epochs × 81 numbers, age, sex</td><td>Risk between 0 and 1 (averaged with the risk model in the ensemble)</td><td><code>cognitive/deep.py</code></td></tr>
+  <tr><td>Epoch sequences</td><td>One night's signals + CAISR annotations</td><td>81 numbers per 30-s epoch</td><td><code>cognitive/epochs.py</code></td></tr>
+  <tr><td>Deep network</td><td>Up to 1,200 epochs × 81 numbers, age, sex</td><td>Risk between 0 and 1</td><td><code>cognitive/deep.py</code></td></tr>
+  <tr><td>Ensemble</td><td>Risks from the risk model and the deep network</td><td>Average of the two rank-scaled risks</td><td><code>cognitive/deep.py</code></td></tr>
   <tr><td>SHAP</td><td>Risk model + one person's numbers</td><td>Contribution of each input to the risk</td><td><code>cognitive/explain.py</code></td></tr>
 </table>
 </div>
@@ -194,7 +212,7 @@ the design goes back to an earlier step. The orange loop is the one that actuall
 
     <rect class="box" x="180" y="292" width="320" height="48" rx="8"/>
     <text class="t" x="340" y="312" text-anchor="middle">5. Model selection / architecture</text>
-    <text class="s" x="340" y="330" text-anchor="middle">CNN + GRU · LR · RF · XGBoost</text>
+    <text class="s" x="340" y="330" text-anchor="middle">CNN + GRU · LR · RF · XGBoost · deep CNN</text>
 
     <rect class="box" x="180" y="360" width="320" height="48" rx="8"/>
     <text class="t" x="340" y="380" text-anchor="middle">6. Training</text>
@@ -384,8 +402,9 @@ Total: 2,012,165 trainable parameters.</figcaption>
 
 <!-- ============ 4. PART 2 ARCHITECTURE ============ -->
 <h2 id="arch2">4. Architecture: cognitive impairment risk (Part 2)</h2>
-<p>Part 2 is a classical machine-learning pipeline: measurements are computed from the night by signal
-processing, then a model maps them to a risk. Each block is a separate, replaceable step.</p>
+<p>Part 2 has two paths. The main one is a classical machine-learning pipeline: measurements are computed
+from the night by signal processing, then a model maps them to a risk. Each block is a separate, replaceable
+step. The second path is a deep network that reads the whole night (below), and the ensemble combines both.</p>
 <figure class="diagram">
 <svg viewBox="0 0 960 380" role="img" aria-label="Risk pipeline: eight groups of inputs combine into a 51-number vector, then median fill, scaling, logistic regression and a risk score, with SHAP on a random forest for explanations">
   <text class="head" x="20" y="22">INPUTS (per night)</text>
@@ -461,6 +480,105 @@ latch onto noise in any single input.</p>
   <tr><td>Repeated 5-fold cross-validation</td><td>4/5 of people</td><td>Remaining 1/5, rotated; repeated 10 times</td><td>How well does it work on new people?</td></tr>
   <tr><td>Leave-one-hospital-out</td><td>2 hospitals</td><td>The third hospital</td><td>Does it work at a new hospital?</td></tr>
   <tr><td>Metric: age-conditioned AUROC</td><td colspan="2">Only compares people within 2 years of age</td><td>Does sleep add information beyond age?</td></tr>
+</table>
+</div>
+
+<h3>Deep network on the whole night</h3>
+<p>Instead of 49 hand-made measures, the deep network reads the night itself: one column of 81 numbers per
+30-second epoch (EEG spectrum shape and total power, heart rate, SpO2, breathing, chin tone, CAISR stage as
+one-hot columns, share of the epoch in an event, and a 0/1 column per signal saying whether it was measured).
+Four convolution blocks each halve the time resolution, from 30 seconds to 8 minutes. Attention pooling then
+learns how much each 8-minute stretch should count, so the network can focus on the parts of the night that
+matter. Padding after the end of the night gets no attention.</p>
+<figure class="diagram">
+<svg viewBox="0 0 960 300" role="img" aria-label="Deep network: input of 81 values by 1,200 epochs, four convolution blocks that halve time each, attention pooling to 128 numbers, joined with age and sex, two dense layers giving a risk, averaged with the logistic regression in the ensemble">
+  <text class="head" x="20" y="22">ENCODER · reads the night as a sequence</text>
+  <rect class="box" x="20" y="36" width="120" height="84" rx="8"/>
+  <text class="t" x="80" y="64" text-anchor="middle">Input</text>
+  <text class="s" x="80" y="84" text-anchor="middle">81 × 1,200</text>
+  <text class="s" x="80" y="102" text-anchor="middle">values × epochs</text>
+
+  <rect class="p2" x="170" y="36" width="120" height="84" rx="8"/>
+  <text class="t" x="230" y="60" text-anchor="middle">Block 1</text>
+  <text class="s" x="230" y="80" text-anchor="middle">2× conv k=5</text>
+  <text class="s" x="230" y="96" text-anchor="middle">BN + GELU</text>
+  <text class="s" x="230" y="112" text-anchor="middle">pool ÷2, dropout</text>
+  <text class="lbl" x="230" y="140" text-anchor="middle">64 × 600 (1 min)</text>
+  <rect class="p2" x="310" y="36" width="120" height="84" rx="8"/>
+  <text class="t" x="370" y="60" text-anchor="middle">Block 2</text>
+  <text class="s" x="370" y="80" text-anchor="middle">2× conv k=5</text>
+  <text class="s" x="370" y="96" text-anchor="middle">BN + GELU</text>
+  <text class="s" x="370" y="112" text-anchor="middle">pool ÷2, dropout</text>
+  <text class="lbl" x="370" y="140" text-anchor="middle">64 × 300 (2 min)</text>
+  <rect class="p2" x="450" y="36" width="120" height="84" rx="8"/>
+  <text class="t" x="510" y="60" text-anchor="middle">Block 3</text>
+  <text class="s" x="510" y="80" text-anchor="middle">2× conv k=5</text>
+  <text class="s" x="510" y="96" text-anchor="middle">BN + GELU</text>
+  <text class="s" x="510" y="112" text-anchor="middle">pool ÷2, dropout</text>
+  <text class="lbl" x="510" y="140" text-anchor="middle">128 × 150 (4 min)</text>
+  <rect class="p2" x="590" y="36" width="120" height="84" rx="8"/>
+  <text class="t" x="650" y="60" text-anchor="middle">Block 4</text>
+  <text class="s" x="650" y="80" text-anchor="middle">2× conv k=5</text>
+  <text class="s" x="650" y="96" text-anchor="middle">BN + GELU</text>
+  <text class="s" x="650" y="112" text-anchor="middle">pool ÷2, dropout</text>
+  <text class="lbl" x="650" y="140" text-anchor="middle">128 × 75 (8 min)</text>
+
+  <rect class="p2" x="750" y="36" width="190" height="84" rx="8"/>
+  <text class="t" x="845" y="60" text-anchor="middle">Attention pooling</text>
+  <text class="s" x="845" y="80" text-anchor="middle">1 weight per time step</text>
+  <text class="s" x="845" y="96" text-anchor="middle">softmax, padding masked</text>
+  <text class="s" x="845" y="112" text-anchor="middle">weighted sum</text>
+  <text class="lbl" x="845" y="140" text-anchor="middle">128</text>
+
+  <path class="wire" d="M140,78 H166" marker-end="url(#arrow)"/>
+  <path class="wire" d="M290,78 H306" marker-end="url(#arrow)"/>
+  <path class="wire" d="M430,78 H446" marker-end="url(#arrow)"/>
+  <path class="wire" d="M570,78 H586" marker-end="url(#arrow)"/>
+  <path class="wire" d="M710,78 H746" marker-end="url(#arrow)"/>
+
+  <text class="head" x="20" y="186">HEAD · gives the risk</text>
+  <rect class="box" x="20" y="200" width="120" height="76" rx="8"/>
+  <text class="t" x="80" y="232" text-anchor="middle">Age, sex</text>
+  <text class="s" x="80" y="252" text-anchor="middle">2 numbers</text>
+
+  <rect class="box" x="170" y="200" width="160" height="76" rx="8"/>
+  <text class="t" x="250" y="232" text-anchor="middle">Join</text>
+  <text class="s" x="250" y="252" text-anchor="middle">128 + 2 = 130</text>
+
+  <rect class="p2" x="360" y="200" width="160" height="76" rx="8"/>
+  <text class="t" x="440" y="232" text-anchor="middle">Dense 32</text>
+  <text class="s" x="440" y="252" text-anchor="middle">GELU, dropout 0.3</text>
+
+  <rect class="p2" x="550" y="200" width="160" height="76" rx="8"/>
+  <text class="t" x="630" y="232" text-anchor="middle">Dense 1</text>
+  <text class="s" x="630" y="252" text-anchor="middle">sigmoid → risk 0–1</text>
+
+  <rect class="grey" x="750" y="200" width="190" height="76" rx="8"/>
+  <text class="t" x="845" y="226" text-anchor="middle">Ensemble</text>
+  <text class="s" x="845" y="246" text-anchor="middle">average with logistic</text>
+  <text class="s" x="845" y="262" text-anchor="middle">regression (rank-scaled)</text>
+
+  <path class="wire" d="M845,148 V166 H250 V196" marker-end="url(#arrow)"/>
+  <path class="wire" d="M140,238 H166" marker-end="url(#arrow)"/>
+  <path class="wire" d="M330,238 H356" marker-end="url(#arrow)"/>
+  <path class="wire" d="M520,238 H546" marker-end="url(#arrow)"/>
+  <path class="wire" d="M710,238 H746" marker-end="url(#arrow)"/>
+</svg>
+<figcaption>Deep network layer by layer, with the output shape after each block (channels × time steps, and how
+much of the night one step covers).</figcaption>
+</figure>
+
+<div class="table-wrap">
+<table>
+  <tr><th>Setting</th><th>Value</th><th>Why</th></tr>
+  <tr><td>Input length</td><td>Up to 10 hours (1,200 epochs)</td><td>Covers a full night; shorter nights are padded and masked</td></tr>
+  <tr><td>Width</td><td>64, 64, 128, 128 channels</td><td>Small, since only about 500 people are impaired</td></tr>
+  <tr><td>Regularisation</td><td>Dropout 0.3, weight decay 0.01</td><td>Stops the network memorising the training people</td></tr>
+  <tr><td>Optimiser</td><td>AdamW, learning rate 0.001, batch 32</td><td>Standard, stable choice</td></tr>
+  <tr><td>Loss</td><td>Binary cross-entropy, impaired class weighted up</td><td>Only 7.6% are impaired</td></tr>
+  <tr><td>Stopping</td><td>Up to 40 rounds, patience 8, on a held-out tenth of the training people</td><td>Stops before overfitting</td></tr>
+  <tr><td>Seeds</td><td>3 networks per split, averaged</td><td>One network is noisy on so few positives</td></tr>
+  <tr><td>Hardware</td><td>Kaggle T4 GPU</td><td>Runs next to the data, which is too big to download</td></tr>
 </table>
 </div>
 
