@@ -45,6 +45,7 @@ This project answers in two stages:
 
 - **82.4% sleep-stage accuracy** (Cohen's κ 0.767) on 20 recordings the network never saw.
 - **Beats age alone** at predicting later cognitive impairment: age-conditioned AUROC **0.672** vs **0.528**, across **6,429 people** from **3 hospitals**.
+- **Deep learning on the whole night:** a CNN with attention pooling reaches **0.694**, and averaging it with the logistic regression gives **0.704**.
 - **Tested on unseen hospitals:** each hospital is held out of training in turn and used as the test set.
 - **Explainable:** SHAP shows which sleep signals raise or lower each person's risk.
 - **Scales to 1.2 TB:** feature extraction streams one night at a time, in parallel, with checkpoints.
@@ -62,6 +63,8 @@ flowchart LR
         E[Full-night PSG<br/>EEG, ECG, EMG, airflow, SpO2] --> F[49 features per night]
         F --> G[Logistic regression<br/>RF, XGBoost]
         G --> H[Risk score + risk group]
+        E --> J[Epoch sequence<br/>81 values per 30 s] --> K[CNN + attention<br/>pooling]
+        K --> H
         G --> I[SHAP explanation]
     end
 ```
@@ -115,6 +118,23 @@ its 1st and 99th percentile so a few broken recordings cannot dominate it.
 <p align="center">
   <img src="results/cognitive/hsp_large_importance.png" width="70%" alt="SHAP feature importance">
 </p>
+
+### Stage 2: deep learning on the whole night
+
+A 1-D CNN reads each night as a sequence of up to 1,200 epochs (81 numbers per 30-second epoch:
+EEG spectrum, heart rate, SpO2, breathing, chin tone and sleep stage). Attention pooling learns
+which parts of the night matter, and the ensemble averages its risk with the logistic
+regression's. Trained on a Kaggle T4 GPU; 3 networks averaged per split.
+
+| Age-conditioned AUROC | Deep network | Logistic regression | Ensemble |
+|---|---|---|---|
+| 5-fold cross-validation (one repeat) | 0.694 | 0.677 | **0.704** |
+| Held-out hospital I0002 | 0.692 | **0.781** | 0.774 |
+| Held-out hospital I0006 | **0.702** | 0.663 | 0.699 |
+| Held-out hospital S0001 | 0.576 | 0.572 | **0.582** |
+
+The ensemble is the most consistent model: best or close to best at every hospital. Full
+numbers are in [`results/cognitive/hsp_large_deep_report.txt`](results/cognitive/hsp_large_deep_report.txt).
 
 The strongest sleep signals are **reduced sleep-spindle (sigma) power**, **more limb
 movements**, **more light N2 sleep** and **less REM sleep**.
@@ -182,6 +202,9 @@ python -m cognitive.baseline data/hsp_large   # age only, logistic regression, r
 python -m cognitive.explain data/hsp_large    # SHAP explanations, risk groups, worked examples
 ```
 
+The deep model runs on Kaggle (GPU): build the `epochs` notebook to turn every night into an
+epoch sequence, then the `deep` notebook, which trains and scores `python -m cognitive.deep`.
+
 ### Score a new night
 
 ```powershell
@@ -217,7 +240,7 @@ All commands run from the project root (`python -m <package>.<script>`).
 │   ├── explain.py          SHAP explanations and risk groups
 │   ├── predict.py          Save the final model and score a new night
 │   ├── epochs.py           One row of numbers per 30 s epoch, for the deep model
-│   └── deep.py             CNN + attention over the whole night (in progress)
+│   └── deep.py             CNN + attention over the whole night, and the ensemble
 │
 ├── common/style.py         Colours and plot settings shared by both parts
 ├── kaggle/                 Builds the Kaggle notebooks that run next to the data

@@ -352,6 +352,39 @@ something about sleep rather than about one hospital. The gain is small for S000
 when S0001 is held out, the model trains on only 1,429 people (the other two hospitals) and is asked to
 predict 5,000, from a hospital with a lower impairment rate and possibly different equipment.</p>
 
+<h3>Deep learning on the whole night</h3>
+<p>The 49 measurements only capture what we thought to measure. To look beyond them, a
+<strong>deep neural network</strong> reads the whole night directly. Each night becomes a sequence of up to
+1,200 thirty-second epochs, with 81 numbers per epoch: the shape of the EEG spectrum, heart rate, oxygen
+saturation, breathing, chin muscle tone and the sleep stage. A 1-D <strong>convolutional network</strong>
+summarises the sequence from 30 seconds up to 8-minute stretches, and <strong>attention pooling</strong>
+learns how much each part of the night should count. Age and sex join at the end. It was trained on a
+Kaggle T4 GPU, with three networks averaged per split.</p>
+<p>The <strong>ensemble</strong> simply averages the deep network's risk with the logistic regression's
+(after ranking both, so they are on the same scale).</p>
+<div class="table-wrap">
+<table>
+  <tr><th>Model</th><th class="num">Age-cond. AUROC</th><th class="num">Same hospital</th><th class="num">AUROC</th><th class="num">AUPRC</th></tr>
+  <tr><td>Deep network</td><td class="num">0.694</td><td class="num">0.689</td><td class="num">0.816</td><td class="num">0.352</td></tr>
+  <tr><td>Logistic regression</td><td class="num">0.677</td><td class="num">0.654</td><td class="num">0.808</td><td class="num">0.313</td></tr>
+  <tr class="best"><td>Ensemble</td><td class="num">0.704</td><td class="num">0.689</td><td class="num">0.820</td><td class="num">0.344</td></tr>
+</table>
+</div>
+<p class="meta">5-fold cross-validation, one repeat (the tables above use ten repeats, so the logistic
+regression scores 0.677 here instead of 0.672).</p>
+<div class="table-wrap">
+<table>
+  <tr><th>Hospital held out</th><th class="num">Deep network</th><th class="num">Logistic regression</th><th class="num">Ensemble</th></tr>
+  <tr><td>I0002</td><td class="num">0.692</td><td class="num"><b>0.781</b></td><td class="num">0.774</td></tr>
+  <tr><td>I0006</td><td class="num"><b>0.702</b></td><td class="num">0.663</td><td class="num">0.699</td></tr>
+  <tr><td>S0001</td><td class="num">0.576</td><td class="num">0.572</td><td class="num"><b>0.582</b></td></tr>
+</table>
+</div>
+<p>The deep network finds signal the hand-made features miss: it beats the logistic regression in
+cross-validation and at I0006. It is weaker at I0002, the smallest hospital. Combining the two gives the
+best and most consistent model, ahead of or close to the best at every hospital. S0001 stays the hardest
+for every model.</p>
+
 <h2 id="explain">9. Explaining the predictions</h2>
 <p>A doctor will not trust a risk score without reasons. <strong>SHAP</strong> (SHapley Additive
 exPlanations, based on game theory) splits each person's predicted risk into a contribution from every
@@ -446,7 +479,8 @@ by leg movements.</p>
       small (0.572 vs 0.537).</li>
   <li><strong>Clinical population.</strong> Everyone was referred to a sleep lab, usually for a suspected
       sleep disorder, so results may not apply to the general population.</li>
-  <li><strong>Hand-designed features.</strong> The 49 measurements only capture what we thought to measure.</li>
+  <li><strong>Hand-designed features.</strong> The 49 measurements only capture what we thought to measure.
+      The deep network reduces this, but it is harder to explain than the feature model.</li>
   <li><strong>Stages from CAISR.</strong> Part 2 uses the dataset's automatic staging, not our own Part 1 network.</li>
   <li><strong>No external test set.</strong> The Challenge's official hidden test hospitals are not
       available, so leave-one-hospital-out is the closest substitute.</li>
@@ -454,11 +488,11 @@ by leg movements.</p>
 
 <h2 id="future">12. Future work</h2>
 <ol>
-  <li><strong>End-to-end deep learning:</strong> train a neural network on the raw signals, as in Part 1,
-      to find patterns beyond the 49 hand-made measurements.</li>
+  <li><strong>Raw-signal deep learning:</strong> the deep network reads per-epoch summaries; a network on
+      the raw waveforms, as in Part 1, might find more.</li>
   <li><strong>Connect Part 1 and Part 2:</strong> score the Challenge recordings with our own sleep-stage
       network and compare with CAISR.</li>
-  <li><strong>Late fusion:</strong> combine the deep-learning risk with the feature model's risk.</li>
+  <li><strong>Explaining the deep network:</strong> show which parts of the night its attention focuses on.</li>
   <li><strong>Hospital adaptation:</strong> methods that make the model less sensitive to differences in
       equipment between hospitals.</li>
 </ol>

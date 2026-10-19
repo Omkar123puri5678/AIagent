@@ -163,6 +163,7 @@ sleep stages supplied with the dataset; the plan is to replace them with our Par
   <tr><td>Sleep-stage network</td><td>20 epochs × 3 channels × 3,000 samples</td><td>One of 5 stages per epoch</td><td><code>sleep_staging/model.py</code>, <code>sleep_staging/train.py</code></td></tr>
   <tr><td>Feature extraction</td><td>One night's signals + CAISR annotations</td><td>49 numbers per night</td><td><code>cognitive/features.py</code></td></tr>
   <tr><td>Risk model</td><td>51 numbers (49 + age + sex)</td><td>Risk between 0 and 1</td><td><code>cognitive/baseline.py</code></td></tr>
+  <tr><td>Deep model</td><td>Up to 1,200 epochs × 81 numbers, age, sex</td><td>Risk between 0 and 1 (averaged with the risk model in the ensemble)</td><td><code>cognitive/deep.py</code></td></tr>
   <tr><td>SHAP</td><td>Risk model + one person's numbers</td><td>Contribution of each input to the risk</td><td><code>cognitive/explain.py</code></td></tr>
 </table>
 </div>
@@ -469,7 +470,7 @@ latch onto noise in any single input.</p>
 <table>
   <tr><th>Purpose</th><th>Tool</th></tr>
   <tr><td>Language</td><td>Python 3.14</td></tr>
-  <tr><td>Deep learning</td><td>PyTorch (CUDA on GTX 1650)</td></tr>
+  <tr><td>Deep learning</td><td>PyTorch (CUDA on GTX 1650 for Part 1, Kaggle T4 GPU for the Part 2 deep model)</td></tr>
   <tr><td>Classical ML</td><td>scikit-learn (logistic regression, random forest), XGBoost</td></tr>
   <tr><td>Signal processing</td><td>SciPy (filters, Welch spectra, peak detection), NumPy</td></tr>
   <tr><td>Reading recordings</td><td>MNE (Sleep-EDF), edfio (Challenge EDF files)</td></tr>
@@ -511,6 +512,9 @@ pip install -r requirements.txt</code></pre>
     cross-validation and leave-one-hospital-out for all four models.</li>
   <li><strong>Explain:</strong> <code>python -m cognitive.explain data/hsp_large</code> computes SHAP values, risk
     groups and worked examples.</li>
+  <li><strong>Deep model (optional, GPU):</strong> <code>python -m cognitive.epochs &lt;path to the data&gt; --out data/hsp_large/epochs</code> turns every night into
+    a sequence of 30-second epochs, then <code>python -m cognitive.deep data/hsp_large</code> trains the CNN with
+    attention pooling and scores it with the logistic regression and their ensemble. Both run on Kaggle.</li>
   <li><strong>Results</strong> are saved in <code>results/cognitive/</code> with the prefix <code>hsp_large_</code>.</li>
 </ol>
 
